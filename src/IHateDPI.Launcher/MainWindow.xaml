@@ -1,0 +1,177 @@
+﻿<Window x:Class="IHateDPI.Launcher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:IHateDPI.Launcher"
+        xmlns:tb="http://www.hardcodet.net/taskbar" 
+        Title="IHateDPI" Icon="/app.ico" Height="480" Width="360"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
+        AllowsTransparency="True" WindowStyle="None" Background="Transparent">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="TrayMenuBackground" Color="#F9F9F9"/>
+        <SolidColorBrush x:Key="TrayMenuBorder" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="TrayMenuForeground" Color="#000000"/>
+        <SolidColorBrush x:Key="TrayMenuHover" Color="#EAEAEA"/>
+
+        <SolidColorBrush x:Key="TrayMenuSeparator" Color="#E0E0E0"/>
+
+        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#A0A0A0"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Margin="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" TargetName="border" Value="#A0A0A0"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#A0A0A0"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Margin="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" TargetName="border" Value="#E81123"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernContextMenu" TargetType="ContextMenu">
+            <Setter Property="Background" Value="{StaticResource TrayMenuBackground}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource TrayMenuBorder}"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Foreground" Value="{StaticResource TrayMenuForeground}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                CornerRadius="8" Padding="5">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="12" Color="Black" Opacity="0.2"/>
+                            </Border.Effect>
+                            <StackPanel IsItemsHost="True"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{StaticResource TrayMenuForeground}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Grid>
+                            <Border x:Name="Border" Background="Transparent" CornerRadius="8"/>
+
+                            <ContentPresenter Content="{TemplateBinding Header}" 
+                                              Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Left" 
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource TrayMenuHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Separator">
+            <Setter Property="Background" Value="{StaticResource TrayMenuSeparator}"/>
+            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1" Background="{TemplateBinding Background}" SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#1E1E2E" CornerRadius="10" BorderThickness="1" BorderBrush="#33FFFFFF">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="32"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <tb:TaskbarIcon x:Name="TrayIcon"
+                            ToolTipText="IHateDPI: Beklemede"
+                            MenuActivation="RightClick"
+                            TrayMouseDoubleClick="TrayIcon_TrayMouseDoubleClick"
+                            IconSource="/app.ico">
+
+                <tb:TaskbarIcon.ContextMenu>
+                    <ContextMenu Style="{StaticResource ModernContextMenu}">
+                        <MenuItem Header="IHateDPI Launcher" IsEnabled="False" FontWeight="Bold" Foreground="#BD93F9"/>
+
+                        <Separator/>
+                        <MenuItem x:Name="MenuStartStop" Header="Başlat" Click="MenuStartStop_Click"/>
+
+                        <Separator/>
+
+                        <MenuItem Header="Çıkış" Click="MenuExit_Click"/>
+                    </ContextMenu>
+                </tb:TaskbarIcon.ContextMenu>
+            </tb:TaskbarIcon>
+
+            <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseDown">
+                <TextBlock Text="IHateDPI" Foreground="#80FFFFFF" FontSize="12" 
+                           VerticalAlignment="Center" Margin="15,0,0,0" IsHitTestVisible="False"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <Button Style="{StaticResource TitleBarButtonStyle}" Click="BtnMinimize_Click">
+                        <Path Data="M0,0 L10,0" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" 
+                              StrokeThickness="1" SnapsToDevicePixels="True"/>
+                    </Button>
+                    <Button Style="{StaticResource CloseButtonStyle}" Click="BtnClose_Click">
+                        <Path Data="M0,0 L10,10 M0,10 L10,0" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" 
+                              StrokeThickness="1" SnapsToDevicePixels="True"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <local:MainView Grid.Row="1" x:Name="MyMainView"/>
+
+        </Grid>
+    </Border>
+</Window>

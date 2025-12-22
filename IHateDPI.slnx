@@ -1,0 +1,14 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/IHateDPI.Engine/IHateDPI.Engine.csproj" Id="8adf1bfb-4b69-402c-af1e-6ab400282808">
+      <Platform Solution="Release|x64" Project="x64" />
+    </Project>
+    <Project Path="src/IHateDPI.Launcher/IHateDPI.Launcher.csproj" />
+  </Folder>
+</Solution>
