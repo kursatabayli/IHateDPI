@@ -58,7 +58,7 @@ IHateDPI Launcher, dilerseniz motor olarak orijinal **GoodbyeDPI** yazılımın�
 
 Bu araç "Taşınabilir (Portable)" olarak tasarlanmıştır. Herhangi bir kurulum gerektirmez.
 
-1.  [Releases](https://github.com/kursatabayli/IHateDPI/releases) sayfasından `IHateDPI-v1.0.0.zip` (önerilen) veya `IHateDPI-Engine-v1.0.0.zip` paketlerinden birini indirin.
+1.  [Releases](https://github.com/kursatabayli/IHateDPI/releases) sayfasından `IHateDPI-v1.0.0-beta.1-win-x64.zip` (önerilen) veya `IHateDPI-Engine-v1.0.0-beta.1-win-x64.zip` paketlerinden birini indirin.
 2.  Zip dosyasını bir klasöre çıkartın.
 3.  `IHateDPI Launcher.exe` (önerilen) veya `IHateDPI Engine.exe` dosyasına sağ tıklayıp **"Yönetici Olarak Çalıştır"** seçeneğini kullanın.
 4.  Kullanıma Başlama:
