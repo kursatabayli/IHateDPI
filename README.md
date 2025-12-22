@@ -58,7 +58,7 @@ IHateDPI Launcher allows you to use the original **GoodbyeDPI** software as the 
 
 This tool is designed as "Portable". It does not require any installation.
 
-1.  Download either `IHateDPI-v1.0.0.zip` (recommended) or `IHateDPI-Engine-v1.0.0.zip` from the [Releases](https://github.com/kursatabayli/IHateDPI/releases) page.
+1.  Download either `IHateDPI-v1.0.0-beta.1-win-x64.zip` (recommended) or `IHateDPI-Engine-v1.0.0-beta.1-win-x64.zip` from the [Releases](https://github.com/kursatabayli/IHateDPI/releases) page.
 2.  Extract the Zip file to a folder.
 3.  Right-click on `IHateDPI Launcher.exe` (recommended) or `IHateDPI Engine.exe` and select **"Run as Administrator"**.
 4.  Starting the Application:
