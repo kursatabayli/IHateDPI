@@ -22,23 +22,20 @@ Bu proje **.NET 9** tabanlı, modern, performans odaklı ve açık kaynaklı bir
 
 ---
 
-### ⚠️ Önemli Yapılandırma ve Sistem Notları
+## ⚙️ Yapılandırma ve Sorun Giderme
 
-#### 1. DoH (DNS over HTTPS) Adresleri
-Uygulama ayarlarında DoH sunucusu belirtirken **kesinlikle IP adresi** kullanmalısınız. Eğer DoH sunucusu olarak bir alan adı (domain) yazarsanız, program bu alanı çözümleyemez ve "Tavuk-Yumurta" problemi oluşarak tüm internet trafiğiniz kesilebilir.
+Tüm motor ayarlarının, parametrelerin, paket manipülasyon stratejilerinin ve bağlantı sorunlarını giderme adımlarının detaylı açıklaması için lütfen ilgili rehbere göz atın:
 
-* ❌ **Yanlış:** `https://cloudflare-dns.com/dns-query`
-* ✅ **Doğru:** `https://1.1.1.1/dns-query`
+👉 **[Yapılandırma ve Sorun Giderme Rehberi](docs/CONFIGURATION-tr.md)**
 
-#### 2. Sistem ve Protokol Kısıtlamaları
+> **İpucu:** Eğer bağlantı sorunu yaşıyorsanız veya internet servis sağlayıcınıza (ISS) özel ince ayar yapmak istiyorsanız, bu rehber kritik bilgiler (DoH ayarı, parçalama stratejileri ve özel çözümler) içerir.
+
+---
+
+### Sistem Gereksinimleri ve Kısıtlamalar
+
 * **Sadece 64-bit:** Proje yalnızca **64-bit (x64)** Windows işletim sistemlerini desteklemektedir. 32-bit (x86) sistemlerde çalışmaz.
 * **IPv6 Desteği:** Şu an için sadece **IPv4** trafiği desteklenmektedir ve işlenmektedir. Eğer sisteminizde IPv6 aktifse, IPv6 üzerinden geçen trafik bu araç tarafından filtrelenmez veya manipüle edilmez (olduğu gibi iletilir). IPv6 desteği **geliştirilme aşamasındadır**.
-
-#### 3. Henüz Aktif Olmayan Özellikler
-`EngineConfig` dosyasında veya arayüzde yer alsa da, aşağıdaki özellikler henüz kod tarafında tam olarak implemente edilmemiştir ve şu an için etkisi yoktur:
-* `NativeFragmentation`
-* `FragmentHttp`
-* `FragmentPersistentHttp`
 
 ---
 
