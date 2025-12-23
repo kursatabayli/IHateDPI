@@ -22,23 +22,20 @@ This project is a **.NET 9** based, modern, performance-oriented, and open-sourc
 
 ---
 
-### ⚠️ Important Configuration and System Notes
+## ⚙️ Configuration & Troubleshooting
 
-#### 1. DoH (DNS over HTTPS) Addresses
-When specifying a DoH server in the application settings, you **must use an IP address**. If you enter a domain name for the DoH server, the program cannot resolve this domain, creating a "Chicken-and-Egg" problem that will cut off your internet traffic.
+For a detailed explanation of all engine settings, parameters, packet manipulation strategies, and troubleshooting steps, please refer to the dedicated configuration guide:
 
-* ❌ **Incorrect:** `https://cloudflare-dns.com/dns-query`
-* ✅ **Correct:** `https://1.1.1.1/dns-query`
+👉 **[Configuration Guide & Troubleshooting](docs/CONFIGURATION.md)**
 
-#### 2. System and Protocol Constraints
+> **Tip:** If you are experiencing connection issues or want to customize the settings for your ISP, this guide provides critical information (such as DoH setup, fragmentation strategies, and specific workarounds).
+
+---
+
+### System Requirements & Constraints
+
 * **64-bit Only:** The project supports only **64-bit (x64)** Windows operating systems. It will not work on 32-bit (x86) systems.
 * **IPv6 Support:** Currently, only **IPv4** traffic is supported and processed. If IPv6 is active on your system, IPv6 traffic will not be filtered or manipulated by this tool (it is passed through as-is). IPv6 support is **under development**.
-
-#### 3. Features Not Yet Active
-Although present in the `EngineConfig` file or the UI, the following features have not yet been fully implemented in the code and currently have no effect:
-* `NativeFragmentation`
-* `FragmentHttp`
-* `FragmentPersistentHttp`
 
 ---
 
