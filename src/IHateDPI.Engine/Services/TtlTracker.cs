@@ -10,8 +10,13 @@ namespace IHateDPI.Engine.Services;
 public sealed class TtlTracker : ITtlTracker, IDisposable
 {
     // Simple key holding only the IP pair. Ports are irrelevant as the route is host-dependent.
-    private readonly record struct IpPairKey(uint SrcIp, uint DstIp);
-
+    private readonly record struct IpPairKey(uint SrcIp, uint DstIp)
+    {
+        public override int GetHashCode()
+        {
+            return (int)(SrcIp ^ DstIp);
+        }
+    }
     // Lightweight data packet to be transported via the channel.
     private readonly record struct TtlUpdate(IpPairKey Key, byte Ttl);
 

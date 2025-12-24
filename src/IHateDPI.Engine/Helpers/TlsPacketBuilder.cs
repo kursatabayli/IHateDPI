@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace IHateDPI.Engine.Helpers;
@@ -27,6 +28,7 @@ public static class TlsPacketBuilder
     /// <param name="buffer">The destination buffer to write the packet to.</param>
     /// <param name="bytesWritten">When this method returns, contains the number of bytes written to the buffer.</param>
     /// <returns><c>true</c> if the packet was successfully written; otherwise, <c>false</c> if the buffer was too small.</returns>
+    [SkipLocalsInit]
     public static bool TryWriteFakeClientHello(string sniDomain, Span<byte> buffer, out int bytesWritten)
     {
         bytesWritten = 0;
@@ -152,7 +154,7 @@ public static class TlsPacketBuilder
         buffer[offset++] = 2; buffer[offset++] = (byte)'h'; buffer[offset++] = (byte)'2';
         // http/1.1
         buffer[offset++] = 8;
-        Encoding.ASCII.GetBytes("http/1.1", buffer[offset..]);
+        "http/1.1"u8.CopyTo(buffer[offset..]);
         offset += 8;
 
         // 3. Supported Versions

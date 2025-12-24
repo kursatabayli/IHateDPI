@@ -1,9 +1,10 @@
-﻿using System.Buffers;
-using System.Buffers.Binary;
-using System.Threading.Channels;
-using IHateDPI.Engine.Abstractions;
+﻿using IHateDPI.Engine.Abstractions;
 using IHateDPI.Engine.Models;
 using IHateDPI.Engine.Native;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 
 namespace IHateDPI.Engine.Processors;
 
@@ -36,13 +37,13 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
         // 1. QUIC Blocking (Port 443 / UDP)
         if (dstPort == 443)
         {
-            return ProcessQuic(ctx, out shouldDrop);
+            return ProcessQuic(ref ctx, out shouldDrop);
         }
 
         // 2. DNS Interception (Port 53 / UDP)
         else if (dstPort == 53)
         {
-            return ProcessDns(ctx, out shouldDrop);
+            return ProcessDns(ref ctx, out shouldDrop);
         }
 
         return false;
@@ -51,7 +52,8 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
     /// <summary>
     /// Processes QUIC (HTTP/3) traffic and optionally blocks it based on configuration.
     /// </summary>
-    private bool ProcessQuic(PacketContext ctx, out bool shouldDrop)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool ProcessQuic(ref PacketContext ctx, out bool shouldDrop)
     {
         shouldDrop = false;
 
@@ -61,7 +63,7 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
 
         // Blocking Logic: Send an ICMP "Port Unreachable" message to the source.
         // This explicitly tells the browser/client that UDP 443 is closed, forcing an immediate fallback to TCP/TLS (HTTP/2).
-        SendIcmpPortUnreachable(ctx);
+        SendIcmpPortUnreachable(ref ctx);
 
         shouldDrop = true; // Drop the original UDP packet.
         return false;      // No modification to the original packet, just a drop.
@@ -70,7 +72,8 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
     /// <summary>
     /// Intercepts standard DNS (Port 53) queries and redirects them to the DoH service if enabled.
     /// </summary>
-    private unsafe bool ProcessDns(PacketContext ctx, out bool shouldDrop)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private unsafe bool ProcessDns(ref PacketContext ctx, out bool shouldDrop)
     {
         shouldDrop = false;
 
@@ -85,16 +88,15 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
         // Copy the WinDivertAddress struct because it's required later for response injection.
         var addressCopy = *ctx.Address;
 
-        var snapshot = new DnsRequestSnapshot
-        {
-            SrcIp = ctx.IpHdr->SrcAddr,
-            DstIp = ctx.IpHdr->DstAddr,
-            SrcPort = ctx.UdpHdr->SrcPort,
-            DstPort = ctx.UdpHdr->DstPort,
-            PayloadBuffer = pooledBuffer,
-            PayloadLength = (int)ctx.PayloadLen,
-            OriginalAddressStruct = addressCopy
-        };
+        var snapshot = new DnsRequestSnapshot(
+            ctx.IpHdr->SrcAddr,
+            ctx.IpHdr->DstAddr,
+            ctx.UdpHdr->SrcPort,
+            ctx.UdpHdr->DstPort,
+            pooledBuffer,
+            (int)ctx.PayloadLen,
+            addressCopy
+        );
 
         // Offload the snapshot to the asynchronous channel.
         // TryWrite is used to be non-blocking.
@@ -118,7 +120,8 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
     /// Constructs and injects an ICMP Destination Unreachable (Type 3, Code 3 - Port Unreachable) message back to the source.
     /// </summary>
     /// <param name="ctx">The context of the packet triggering the error.</param>
-    private unsafe void SendIcmpPortUnreachable(PacketContext ctx)
+    [SkipLocalsInit]
+    private unsafe void SendIcmpPortUnreachable(ref PacketContext ctx)
     {
         int originalIpHeaderLen = ctx.IpHdr->HdrLength;
 
@@ -128,7 +131,6 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
 
         // Use stack allocation for speed.
         Span<byte> icmpPacketSpan = stackalloc byte[newPacketLen];
-        icmpPacketSpan.Clear();
 
         fixed (byte* pIcmpPacket = icmpPacketSpan)
         {

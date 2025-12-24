@@ -12,51 +12,106 @@ internal class Program
 {
     private const string ConfigFileName = "engineConfig.json";
 
-    static void Main()
+    private static readonly CancellationTokenSource _cts = new();
+
+    // Change Main to async Task Main
+    static async Task Main()
     {
         Console.Title = "IHateDPI Engine";
         Console.WriteLine("Initializing IHateDPI...");
 
-        // 1. Load Configuration
+        // 1. Handle Graceful Shutdown (Ctrl+C or 'X' button simulation support)
+        Console.CancelKeyPress += (s, e) =>
+        {
+            // Prevent immediate termination, let us handle cleanup
+            e.Cancel = true;
+            Console.WriteLine("[System] Shutdown signal received (Ctrl+C).");
+            _cts.Cancel();
+        };
+
+        // Safety net for process exit
+        AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+        {
+            if (!_cts.IsCancellationRequested) _cts.Cancel();
+        };
+
         var config = LoadConfiguration();
         PrintConfiguration(config);
 
         try
         {
-            // 2. Lifecycle Management (Composition Root)
-            // Since we aren't using a heavy DI container, we manually instantiate and link dependencies here.
-            // 'using' statements ensure all resources are disposed correctly upon exit.
-
-            // Shared Dependencies
+            // 2. Lifecycle Management
             using var ttlTracker = new TtlTracker();
             using var dnsResolver = new DohClient(config.DohProviderUrl);
-
-            // Build and Start the Engine
             using var engine = BuildEngine(config, ttlTracker, dnsResolver);
 
-            // Hook up logging to Console
             engine.OnLog += (msg) => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {msg}");
-
             engine.Start();
 
-            Console.WriteLine("\n--> Engine is active. Press ENTER to shutdown.\n");
-            Console.ReadLine();
+            Console.WriteLine("\n--> Engine is running. Waiting for commands...");
 
-            Console.WriteLine("Stopping engine...");
+            // 3. Start the Command Listener (Listen for 'STOP' from Launcher)
+            // This runs in background and doesn't block the main thread logic
+            _ = Task.Run(() => ListenForCommands(Console.In, _cts));
+
+            // 4. Wait indefinitely until the token is cancelled
+            try
+            {
+                // This is the elegant replacement for Console.ReadLine()
+                await Task.Delay(-1, _cts.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                // Expected flow when shutting down
+            }
+
+            Console.WriteLine("Stopping engine logic...");
             engine.Stop();
         }
-        catch (DllNotFoundException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            PrintCriticalError("WinDivert driver files are missing!",
-                "Please ensure 'WinDivert.dll' and 'WinDivert64.sys' are present in the application directory.");
-        }
-        catch (Exception ex)
-        {
-            PrintCriticalError($"FATAL ERROR: {ex.Message}",
-                ex.InnerException != null ? $"Caused by: {ex.InnerException.Message}" : null);
+            PrintCriticalError($"FATAL ERROR: {ex.Message}");
         }
 
-        // Resources (ttlTracker, dnsResolver, engine) are automatically disposed here.
+        Console.WriteLine("Cleanup complete. Exiting.");
+    }
+
+    /// <summary>
+    /// Listens to Standard Input for specific commands from the Launcher.
+    /// </summary>
+    private static async Task ListenForCommands(TextReader input, CancellationTokenSource cts)
+    {
+        try
+        {
+            while (!cts.Token.IsCancellationRequested)
+            {
+                // ReadLineAsync is non-blocking
+                var command = await input.ReadLineAsync(cts.Token);
+
+                if (command == null)
+                {
+                    Console.WriteLine("[System] Input stream closed. Shutting down...");
+                    cts.Cancel();
+                    break;
+                }
+
+                if (string.IsNullOrWhiteSpace(command)) continue;
+
+                if (command.Trim().Equals("STOP", StringComparison.OrdinalIgnoreCase) ||
+                    command.Trim().Equals("EXIT", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("[Command] Stop command received from Launcher.");
+                    cts.Cancel();
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException) { /* Normal shutdown */ }
+        catch (Exception)
+        {
+            // If the input stream breaks (Launcher crashes), we should probably shut down too
+            cts.Cancel();
+        }
     }
 
     /// <summary>

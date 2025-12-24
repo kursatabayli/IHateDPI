@@ -12,6 +12,9 @@ namespace IHateDPI.Engine.Native;
 public static partial class NativeMethods
 {
     private const string DllName = "WinDivert.dll";
+    public const int WINDIVERT_SHUTDOWN_RECV = 0x1;
+    public const int WINDIVERT_SHUTDOWN_SEND = 0x2;
+    public const int WINDIVERT_SHUTDOWN_BOTH = 0x3;
 
     /// <summary>
     /// Opens a handle to the WinDivert driver to capture packets matching the specified filter.
@@ -22,7 +25,7 @@ public static partial class NativeMethods
     /// <param name="flags">Configuration flags for the handle.</param>
     /// <returns>A valid handle if successful; otherwise, <see cref="IntPtr.Zero"/>.</returns>
     [LibraryImport(DllName, StringMarshalling = StringMarshalling.Utf8)]
-    public static partial IntPtr WinDivertOpen(string filter, int layer, short priority, ulong flags);
+    public static partial WinDivertHandle WinDivertOpen(string filter, int layer, short priority, ulong flags);
 
     /// <summary>
     /// Receives a packet from the driver queue.
@@ -36,7 +39,7 @@ public static partial class NativeMethods
     [LibraryImport(DllName)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static unsafe partial bool WinDivertRecv(
-        IntPtr handle, void* pPacket, uint packetLen, out uint pRecvLen, ref WinDivertAddress pAddr);
+        WinDivertHandle handle, void* pPacket, uint packetLen, out uint pRecvLen, ref WinDivertAddress pAddr);
 
     /// <summary>
     /// Injects a packet into the network stack.
@@ -50,7 +53,7 @@ public static partial class NativeMethods
     [LibraryImport(DllName)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static unsafe partial bool WinDivertSend(
-        IntPtr handle, void* pPacket, uint packetLen, out uint pSendLen, ref WinDivertAddress pAddr);
+        WinDivertHandle handle, void* pPacket, uint packetLen, out uint pSendLen, ref WinDivertAddress pAddr);
 
     /// <summary>
     /// Re-calculates the checksums for the IP, TCP, and UDP headers.
@@ -85,12 +88,43 @@ public static partial class NativeMethods
     [LibraryImport(DllName)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static unsafe partial bool WinDivertHelperParsePacket(
-        void* pPacket, uint packetLen,
-        out IPHdr* ppIpHdr, out void* ppIpv6Hdr, out byte pProtocol,
-        out void* ppIcmpHdr, out void* ppIcmpv6Hdr,
-        out TCPHdr* ppTcpHdr, out UDPHdr* ppUdpHdr,
-        out void* ppData, out uint pDataLen,
-        out void* ppNext, out uint pNextLen);
+        void* pPacket,
+        uint packetLen,
+        out IPHdr* ppIpHdr,
+        out void* ppIpv6Hdr,
+        out byte pProtocol,
+        out void* ppIcmpHdr,
+        out void* ppIcmpv6Hdr,
+        out TCPHdr* ppTcpHdr,
+        out UDPHdr* ppUdpHdr,
+        out void* ppData,
+        out uint pDataLen,
+        out void* ppNext,
+        out uint pNextLen);
+
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static unsafe partial bool WinDivertHelperParsePacket(
+    void* pPacket,
+    uint packetLen,
+    out IPHdr* ppIpHdr,
+    IntPtr ppIpv6Hdr,
+    IntPtr pProtocol,
+    IntPtr ppIcmpHdr,
+    IntPtr ppIcmpv6Hdr,
+    out TCPHdr* ppTcpHdr,
+    out UDPHdr* ppUdpHdr,
+    out void* ppData,
+    out uint pDataLen,
+    IntPtr ppNext,   
+    IntPtr pNextLen);
+
+    /// <summary>
+    /// Closes the WinDivert handle and traffic.
+    /// </summary>
+    [LibraryImport(DllName)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool WinDivertShutdown(WinDivertHandle handle, int how);
 
     /// <summary>
     /// Closes the WinDivert handle and releases resources.

@@ -78,6 +78,8 @@ public partial class MainView : UserControl
     /// </summary>
     public void StartEngine()
     {
+        if (IsRunning) StopEngine();
+
         var currentConfig = ReadConfig();
         try
         {
@@ -105,30 +107,46 @@ public partial class MainView : UserControl
     /// <summary>
     /// Terminates the active engine process (if any).
     /// </summary>
-    public void StopEngine()
+    public async void StopEngine()
     {
-        var currentConfig = ReadConfig();
-
-        if (currentConfig.SelectedEngine == EngineType.IHateDPI)
+        if (_engineProcess != null && !_engineProcess.HasExited)
         {
-            if (_engineProcess != null && !_engineProcess.HasExited)
+            try
             {
-                try
+                if (_engineProcess.StartInfo.RedirectStandardInput)
                 {
-                    _engineProcess.Kill();
-                    _engineProcess.WaitForExit();
+                    // Send the specific command we agreed upon
+                    await _engineProcess.StandardInput.WriteLineAsync("STOP");
+
+                    // Wait for the Engine to clean up and exit on its own
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                    try
+                    {
+                        await _engineProcess.WaitForExitAsync(cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // It took too long, time to be brutal
+                        Debug.WriteLine("Engine timeout. Forcing kill.");
+                        _engineProcess.Kill(true);
+                    }
                 }
-                catch { /* Process might have already exited */ }
+                else
+                {
+                    _engineProcess.Kill(true);
+                }
             }
-            _engineProcess = null;
-        }
-        else
-        {
-            // GoodbyeDPI might spawn child processes or be launched via cmd, so we ensure all instances are killed.
-            var gdpiProcesses = Process.GetProcessesByName("goodbyedpi");
-            foreach (var p in gdpiProcesses)
+            catch (Exception ex)
             {
-                try { p.Kill(); p.WaitForExit(); } catch { }
+                Debug.WriteLine($"Stop error: {ex.Message}");
+                // Last resort
+                if (!_engineProcess.HasExited) 
+                    _engineProcess.Kill(true);
+            }
+            finally
+            {
+                _engineProcess.Dispose();
+                _engineProcess = null;
             }
         }
 
@@ -145,7 +163,8 @@ public partial class MainView : UserControl
             UseShellExecute = false,
             CreateNoWindow = true, // Run in background
             WindowStyle = ProcessWindowStyle.Hidden,
-            WorkingDirectory = Path.GetDirectoryName(IHateDpiPath)
+            WorkingDirectory = Path.GetDirectoryName(IHateDpiPath),
+            RedirectStandardInput = true // For graceful shutdown
         };
 
         _engineProcess = Process.Start(psi);
