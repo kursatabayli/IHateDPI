@@ -1,7 +1,8 @@
 ﻿using IHateDPI.Engine.Abstractions;
 using IHateDPI.Engine.Models;
 using IHateDPI.Engine.Native;
-using System.Buffers;
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
@@ -20,7 +21,7 @@ namespace IHateDPI.Engine.Services;
 /// </remarks>
 public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsResolver, Channel<DnsRequestSnapshot> dnsChannel, EngineConfig config, ITtlTracker ttlTracker) : IDisposable, IPacketInjector
 {
-    private IntPtr _handle;
+    private WinDivertHandle? _handle;
     private volatile bool _isRunning;
     private CancellationTokenSource? _cts;
     private Thread? _workerThread;
@@ -87,7 +88,7 @@ public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsRes
         }
 
         // Validate Handle (IntPtr.Zero or -1 indicates failure)
-        if (_handle == IntPtr.Zero || _handle == new IntPtr(-1))
+        if (_handle == null || _handle.IsInvalid)
         {
             int errorCode = Marshal.GetLastWin32Error();
             string errorMsg = errorCode switch
@@ -131,25 +132,34 @@ public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsRes
     /// </summary>
     public void Stop()
     {
-        if (!_isRunning) return;
+        if (!_isRunning) 
+            return;
+
         _isRunning = false;
+
         _cts?.Cancel();
+
         dnsChannel.Writer.TryComplete();
 
-        NativeMethods.WinDivertClose(_handle);
-        _handle = IntPtr.Zero;
+        if (_handle != null && !_handle.IsInvalid)
+            NativeMethods.WinDivertShutdown(_handle, NativeMethods.WINDIVERT_SHUTDOWN_BOTH);
+
 
         if (_workerThread != null && _workerThread.IsAlive)
-        {
-            _workerThread.Join(1000);
-        }
-        OnLog?.Invoke("[Engine] Stopped.");
+            if (!_workerThread.Join(1500))
+                OnLog?.Invoke("[Warning] Worker thread did not exit gracefully, forcing close.");
+
+
+        _handle?.Dispose();
+        _handle = null;
+
+        OnLog?.Invoke("[Engine] Stopped cleanly.");
     }
 
     /// <inheritdoc />
     public unsafe void Inject(byte* pPacket, uint packetLen, ref WinDivertAddress addr)
     {
-        if (!_isRunning || _handle == IntPtr.Zero) return;
+        if (!_isRunning || _handle == null || _handle.IsInvalid) return;
         NativeMethods.WinDivertSend(_handle, pPacket, packetLen, out _, ref addr);
     }
 
@@ -170,114 +180,147 @@ public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsRes
     private unsafe void PacketLoop()
     {
         // Allocate a buffer large enough for the MTU (64KB is safe for loopback/jumbo frames).
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(65535);
+        const int BufferSize = 65535;
+        byte* pBuffer = (byte*)NativeMemory.Alloc(BufferSize);
+
         WinDivertAddress addr = new();
 
         try
         {
-            fixed (byte* pBuffer = buffer)
-            {
-                WinDivertAddress* pAddr = &addr;
+            WinDivertAddress* pAddr = &addr;
 
-                while (_isRunning)
+            while (_isRunning)
+            {
+                if (_handle == null || _handle.IsInvalid) break;
+
+                if (!NativeMethods.WinDivertRecv(_handle, pBuffer, 65535, out uint readLen, ref addr))
                 {
+                    if (!_isRunning)
+                        break;
+
+                    var error = Marshal.GetLastWin32Error();
+                    if (error == 995 || error == 6)
+                        break;
+
+                    OnLog?.Invoke($"[WinDivertRecv Warning] Code: {error}. Retrying...");
+
+                    Thread.Sleep(10);
+                    continue;
+                }
+
+                try
+                {
+
+                    // Parse packet headers
+                    NativeMethods.WinDivertHelperParsePacket(
+                        pBuffer, 
+                        readLen,
+                        out IPHdr* ipHdr, 
+                        IntPtr.Zero, 
+                        IntPtr.Zero, 
+                        IntPtr.Zero, 
+                        IntPtr.Zero,
+                        out TCPHdr* tcpHdr, 
+                        out UDPHdr* udpHdr,
+                        out void* payloadPtr, 
+                        out uint payloadLen, 
+                        IntPtr.Zero, 
+                        IntPtr.Zero);
+
+                    var context = new PacketContext
+                    {
+                        Handle = _handle!,
+                        RawPacket = pBuffer,
+                        PacketLen = (int)readLen,
+                        Address = pAddr,
+                        IpHdr = ipHdr,
+                        TcpHdr = tcpHdr,
+                        UdpHdr = udpHdr,
+                        Payload = (byte*)payloadPtr,
+                        PayloadLen = payloadLen
+                    };
+
+                    // --- INBOUND PACKET PROCESSING ---
+                    if (!context.IsOutbound)
+                    {
+                        // Track TTL from inbound SYN/ACK packets to estimate server distance.
+                        if (tcpHdr != null && tcpHdr->Syn && tcpHdr->Ack)
+                        {
+                            ttlTracker.TrackPacket(
+                                ipHdr->SrcAddr, ipHdr->DstAddr,
+                                tcpHdr->SrcPort, tcpHdr->DstPort,
+                                ipHdr->TTL
+                            );
+                        }
+
+                        // Inject inbound packets back immediately without modification.
+                        if (_isRunning && _handle != null && !_handle.IsInvalid)
+                            NativeMethods.WinDivertSend(_handle, pBuffer, readLen, out _, ref addr);
+                        continue;
+                    }
+
+                    // --- OUTBOUND PACKET PROCESSING ---
+                    bool isModified = false;
+                    bool shouldDrop = false;
+                    uint newLen = readLen;
+
                     try
                     {
-                        if (!NativeMethods.WinDivertRecv(_handle, pBuffer, 65535, out uint readLen, ref addr))
-                            continue;
-
-                        // Parse packet headers
-                        NativeMethods.WinDivertHelperParsePacket(pBuffer, readLen,
-                            out IPHdr* ipHdr, out _, out _, out _, out _,
-                            out TCPHdr* tcpHdr, out UDPHdr* udpHdr,
-                            out void* payloadPtr, out uint payloadLen, out _, out _);
-
-                        var context = new PacketContext
+                        foreach (var processor in _processors)
                         {
-                            Handle = _handle,
-                            RawPacket = pBuffer,
-                            PacketLen = (int)readLen,
-                            Address = pAddr,
-                            IpHdr = ipHdr,
-                            TcpHdr = tcpHdr,
-                            UdpHdr = udpHdr,
-                            Payload = (byte*)payloadPtr,
-                            PayloadLen = payloadLen
-                        };
-
-                        // --- INBOUND PACKET PROCESSING ---
-                        if (!context.IsOutbound)
-                        {
-                            // Track TTL from inbound SYN/ACK packets to estimate server distance.
-                            if (tcpHdr != null && tcpHdr->Syn && tcpHdr->Ack)
+                            // ref newLen: Allows processors to truncate or extend the packet.
+                            if (processor.Process(context, ref newLen, out bool dropDecision))
                             {
-                                ttlTracker.TrackPacket(
-                                    ipHdr->SrcAddr, ipHdr->DstAddr,
-                                    tcpHdr->SrcPort, tcpHdr->DstPort,
-                                    ipHdr->TTL
-                                );
+                                isModified = true;
+                                // If a processor modifies the packet, we usually stop the chain.
+                                break;
                             }
 
-                            // Inject inbound packets back immediately without modification.
-                            NativeMethods.WinDivertSend(_handle, pBuffer, readLen, out _, ref addr);
-                            continue;
+                            if (dropDecision)
+                            {
+                                shouldDrop = true;
+                                break;
+                            }
                         }
 
-                        // --- OUTBOUND PACKET PROCESSING ---
-                        bool isModified = false;
-                        bool shouldDrop = false;
-                        uint newLen = readLen;
+                        // If the packet is marked for dropping (e.g., QUIC blocked, DNS diverted), skip injection.
+                        if (shouldDrop) continue;
 
-                        try
+                        // Recalculate checksums if content changed.
+                        if (isModified)
                         {
-                            foreach (var processor in _processors)
-                            {
-                                // ref newLen: Allows processors to truncate or extend the packet.
-                                if (processor.Process(context, ref newLen, out bool dropDecision))
-                                {
-                                    isModified = true;
-                                    // If a processor modifies the packet, we usually stop the chain.
-                                    break;
-                                }
+                            NativeMethods.WinDivertHelperCalcChecksums(pBuffer, newLen, ref addr, 0);
+                        }
 
-                                if (dropDecision)
-                                {
-                                    shouldDrop = true;
-                                    break;
-                                }
-                            }
-
-                            // If the packet is marked for dropping (e.g., QUIC blocked, DNS diverted), skip injection.
-                            if (shouldDrop) continue;
-
-                            // Recalculate checksums if content changed.
-                            if (isModified)
-                            {
-                                NativeMethods.WinDivertHelperCalcChecksums(pBuffer, newLen, ref addr, 0);
-                            }
-
-                            // Inject the packet back into the network.
+                        // Inject the packet back into the network.
+                        if (_isRunning && _handle != null && !_handle.IsInvalid)
+                        {
                             NativeMethods.WinDivertSend(_handle, pBuffer, newLen, out _, ref addr);
                         }
-                        catch (Exception procEx)
-                        {
-                            // Fail-Open: If a processor crashes, log the error but allow the original packet to pass
-                            // to avoid interrupting internet connectivity.
-                            OnLog?.Invoke($"[Processor Error] {procEx.Message}");
-                            NativeMethods.WinDivertSend(_handle, pBuffer, readLen, out _, ref addr);
-                        }
-
                     }
-                    catch (Exception ex)
+                    catch (Exception procEx)
                     {
-                        if (_isRunning) OnLog?.Invoke($"[Error] {ex.Message}");
+                        // Fail-Open: If a processor crashes, log the error but allow the original packet to pass
+                        // to avoid interrupting internet connectivity.
+                        OnLog?.Invoke($"[Processor Error] {procEx.Message}");
+                        if (_isRunning && _handle != null && !_handle.IsInvalid)
+                            NativeMethods.WinDivertSend(_handle, pBuffer, readLen, out _, ref addr);
                     }
+
+                }
+                catch (Exception ex)
+                {
+                    if (_isRunning) OnLog?.Invoke($"[Error] {ex.Message}");
                 }
             }
         }
+        catch (Exception ex)
+        {
+            if (_isRunning) OnLog?.Invoke($"[Critical Loop Error] {ex.Message}");
+        }
         finally
         {
-            ArrayPool<byte>.Shared.Return(buffer);
+            NativeMemory.Free(pBuffer);
         }
     }
 
@@ -285,6 +328,7 @@ public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsRes
     {
         Stop();
         _cts?.Dispose();
+        _handle?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

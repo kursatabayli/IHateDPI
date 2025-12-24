@@ -3,6 +3,8 @@ using IHateDPI.Engine.Helpers;
 using IHateDPI.Engine.Models;
 using IHateDPI.Engine.Native;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace IHateDPI.Engine.Processors;
 
@@ -39,15 +41,10 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
         if (ctx.PayloadLen <= 0)
             return false;
 
-        // HTTP Manipulation (Port 80):
-        // Attempt to bypass case-sensitive string filters by modifying the "Host" header.
-        if (dstPort == 80)
-        {
-            return ProcessHttp(ctx);
-        }
+
         // HTTPS Manipulation (Port 443):
         // Detect TLS ClientHello packets (0x16 = Handshake, 0x01 = ClientHello) and apply fragmentation.
-        else if (dstPort == 443)
+        if (dstPort == 443)
         {
             var payload = ctx.PayloadSpan;
 
@@ -56,6 +53,13 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
                 return ProcessHttps(ctx, ref newPacketLen);
             }
         }
+        // HTTP Manipulation (Port 80):
+        // Attempt to bypass case-sensitive string filters by modifying the "Host" header.
+        else if (dstPort == 80)
+        {
+            return ProcessHttp(ctx, ref newPacketLen);
+        }
+
 
         return false;
     }
@@ -63,6 +67,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// <summary>
     /// Applies TCP Window Clamping to SYN packets.
     /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private unsafe bool ProcessTcpHandshake(TCPHdr* tcpHdr)
     {
         // Limits the amount of data the server can send at once.
@@ -74,7 +79,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// <summary>
     /// Applies HTTP Host header manipulations (Port 80) based on the configuration.
     /// </summary>
-    private unsafe bool ProcessHttp(PacketContext ctx)
+    private unsafe bool ProcessHttp(PacketContext ctx, ref uint packetLen)
     {
         // Early exit if no manipulation is enabled.
         if (!config.MixHost && !config.HostNoSpace && !config.AdditionalSpace)
@@ -106,7 +111,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
                 payload.Slice(spaceIndex + 1, bytesToMove).CopyTo(payload[spaceIndex..]);
 
                 // Decrease packet size (TCP Payload shrunk by 1 byte).
-                DecreasePacketSize(ref ctx, 1);
+                DecreasePacketSize(ref ctx, ref packetLen, 1);
 
                 // Update payload reference as the length has changed.
                 payload = ctx.PayloadSpan;
@@ -142,7 +147,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
                 if (bytesToMove > 0)
                 {
                     // First, increase the packet size.
-                    IncreasePacketSize(ref ctx, 1);
+                    IncreasePacketSize(ref ctx, ref packetLen, 1);
 
                     // Refresh payload span.
                     payload = ctx.PayloadSpan;
@@ -165,10 +170,12 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// <summary>
     /// Decreases the packet total length by the specified amount and updates the IP header.
     /// </summary>
-    private unsafe void DecreasePacketSize(ref PacketContext ctx, int amount)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private unsafe void DecreasePacketSize(ref PacketContext ctx, ref uint packetLen, int amount)
     {
         ctx.PacketLen -= amount;
         ctx.PayloadLen -= (uint)amount;
+        packetLen -= (uint)amount;
 
         ushort currentLen = BinaryPrimitives.ReverseEndianness(ctx.IpHdr->Length);
         ctx.IpHdr->Length = BinaryPrimitives.ReverseEndianness((ushort)(currentLen - amount));
@@ -177,10 +184,11 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// <summary>
     /// Increases the packet total length by the specified amount and updates the IP header.
     /// </summary>
-    private unsafe void IncreasePacketSize(ref PacketContext ctx, int amount)
+    private unsafe void IncreasePacketSize(ref PacketContext ctx, ref uint packetLen, int amount)
     {
         ctx.PacketLen += amount;
         ctx.PayloadLen += (uint)amount;
+        packetLen += (uint)amount;
 
         ushort currentLen = BinaryPrimitives.ReverseEndianness(ctx.IpHdr->Length);
         ctx.IpHdr->Length = BinaryPrimitives.ReverseEndianness((ushort)(currentLen + amount));
@@ -240,7 +248,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
 
             // 2. Modify the current packet to become the FIRST part.
             // Just truncate the length; no data movement needed.
-            TruncatePacket(ctx, ref packetLen, length: splitSize);
+            TruncatePacket(ref ctx, ref packetLen, length: splitSize);
         }
         // --- SCENARIO B: NORMAL FRAGMENTATION (1 -> 2) ---
         else
@@ -252,7 +260,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
 
             // 2. Modify the current packet to become the SECOND part.
             // Shift data to the left (beginning).
-            ShiftPacketPayload(ctx, ref packetLen, splitSize: splitSize);
+            ShiftPacketPayload(ref ctx, ref packetLen, splitSize: splitSize);
         }
 
         return true;
@@ -265,6 +273,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// to ensure it reaches the DPI inspector but is discarded by the destination server or intermediate routers.
     /// </para>
     /// </summary>
+    [SkipLocalsInit]
     private unsafe void SendFakePacket(PacketContext ctx, string sniDomain)
     {
         int headerLen = ctx.IpHdr->HdrLength + ctx.TcpHdr->HeaderLength;
@@ -272,7 +281,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
         Span<byte> fakeBuffer = stackalloc byte[2048];
 
         // Copy original headers
-        new Span<byte>(ctx.RawPacket, headerLen).CopyTo(fakeBuffer);
+        ctx.FullPacketSpan[..headerLen].CopyTo(fakeBuffer);
 
         // Generate a fake TLS ClientHello payload
         if (!TlsPacketBuilder.TryWriteFakeClientHello(sniDomain, fakeBuffer[headerLen..], out int fakePayloadLen))
@@ -343,6 +352,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// <param name="offset">The start index in the payload to copy from.</param>
     /// <param name="length">The number of bytes to copy.</param>
     /// <param name="seqAdjustment">The amount to increase the TCP Sequence Number by.</param>
+    [SkipLocalsInit]
     private unsafe void InjectFragment(PacketContext ctx, int offset, int length, int seqAdjustment)
     {
         var ipHeader = ctx.IpHdr;
@@ -355,10 +365,10 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
         Span<byte> buffer = stackalloc byte[totalPacketLen];
 
         // 1. Copy Headers
-        new Span<byte>(ctx.RawPacket, headerLen).CopyTo(buffer);
+        ctx.FullPacketSpan[..headerLen].CopyTo(buffer);
 
         // 2. Copy Payload Segment
-        new Span<byte>(ctx.Payload + offset, length).CopyTo(buffer[headerLen..]);
+        ctx.PayloadSpan.Slice(offset, length).CopyTo(buffer[headerLen..]);
 
         fixed (byte* pBuffer = buffer)
         {
@@ -384,7 +394,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// <summary>
     /// Truncates the current packet by removing data from the end. Used for Part 1 in Reverse Fragmentation.
     /// </summary>
-    private unsafe void TruncatePacket(PacketContext ctx, ref uint packetLen, int length)
+    private unsafe void TruncatePacket(ref PacketContext ctx, ref uint packetLen, int length)
     {
         var ipHeader = ctx.IpHdr;
         var tcpHeader = ctx.TcpHdr;
@@ -402,23 +412,16 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// <summary>
     /// Removes data from the beginning of the packet and shifts the remaining data to the front. Used for Part 2 in Normal Fragmentation.
     /// </summary>
-    private unsafe void ShiftPacketPayload(PacketContext ctx, ref uint packetLen, int splitSize)
+    private unsafe void ShiftPacketPayload(ref PacketContext ctx, ref uint packetLen, int splitSize)
     {
         var ipHeader = ctx.IpHdr;
         var tcpHeader = ctx.TcpHdr;
-        int payloadLen = (int)ctx.PayloadLen;
-        int remainingLen = payloadLen - splitSize;
+        var payload = ctx.PayloadSpan;
+        payload[splitSize..].CopyTo(payload);
 
-        // 1. Shift Data (Memory Move)
-        // Copy the data after 'splitSize' to the beginning of the payload buffer.
-        new Span<byte>(ctx.Payload + splitSize, remainingLen).CopyTo(new Span<byte>(ctx.Payload, remainingLen));
-
-        // 2. Decrease Size
         packetLen -= (uint)splitSize;
         ipHeader->Length = BinaryPrimitives.ReverseEndianness((ushort)packetLen);
 
-        // 3. Advance Sequence Number
-        // Since we dropped the first 'splitSize' bytes (because they were sent in Part 1), we must increment Seq.
         uint currentSeq = BinaryPrimitives.ReverseEndianness(tcpHeader->SeqNum);
         tcpHeader->SeqNum = BinaryPrimitives.ReverseEndianness(currentSeq + (uint)splitSize);
     }

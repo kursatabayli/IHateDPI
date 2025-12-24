@@ -15,7 +15,7 @@ public unsafe ref struct PacketContext
     /// Gets the WinDivert handle associated with the capture session. 
     /// Required for re-injecting the packet back into the network stack.
     /// </summary>
-    public IntPtr Handle { get; init; }
+    public WinDivertHandle Handle { get; init; }
 
     /// <summary>
     /// Gets the pointer to the start of the raw packet buffer.

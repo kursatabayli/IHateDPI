@@ -1,9 +1,10 @@
-﻿using System.Buffers;
-using System.Buffers.Binary;
-using System.Threading.Channels;
-using IHateDPI.Engine.Abstractions;
+﻿using IHateDPI.Engine.Abstractions;
 using IHateDPI.Engine.Models;
 using IHateDPI.Engine.Native;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 
 namespace IHateDPI.Engine.Services;
 
@@ -57,7 +58,7 @@ public sealed class DnsOverHttpsService(ChannelReader<DnsRequestSnapshot> reader
                         finally
                         {
                             ArrayPool<byte>.Shared.Return(responseBuffer);
-                            snapshot.Dispose();
+                            ArrayPool<byte>.Shared.Return(snapshot.PayloadBuffer);
                         }
                     });
     }
@@ -68,7 +69,8 @@ public sealed class DnsOverHttpsService(ChannelReader<DnsRequestSnapshot> reader
     /// <param name="req">The snapshot of the original DNS request (used for routing and port information).</param>
     /// <param name="responsePayload">The buffer containing the resolved DNS response data.</param>
     /// <param name="payloadLength">The length of the valid data in the response buffer.</param>
-    private unsafe void InjectResponse(DnsRequestSnapshot req, byte[] responsePayload, int payloadLength)
+    [SkipLocalsInit]
+    private unsafe void InjectResponse(in DnsRequestSnapshot req, byte[] responsePayload, int payloadLength)
     {
         int totalLen = 20 + 8 + payloadLength; // IP Header (20) + UDP Header (8) + DNS Data
 

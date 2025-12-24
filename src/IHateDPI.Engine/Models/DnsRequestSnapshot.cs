@@ -10,53 +10,39 @@ namespace IHateDPI.Engine.Models;
 /// Since the original packet memory is freed in the WinDivert loop, this class holds a persistent copy of the data
 /// required for asynchronous processing (e.g., DoH resolution).
 /// </remarks>
-public sealed class DnsRequestSnapshot : IDisposable
-{
+public readonly record struct DnsRequestSnapshot(
     /// <summary>
     /// Gets the source IP address in host byte order.
     /// </summary>
-    public uint SrcIp { get; init; }
+    uint SrcIp,
 
     /// <summary>
     /// Gets the destination IP address in host byte order.
     /// </summary>
-    public uint DstIp { get; init; }
+    uint DstIp,
 
     /// <summary>
     /// Gets the source port number.
     /// </summary>
-    public ushort SrcPort { get; init; }
+    ushort SrcPort,
 
     /// <summary>
     /// Gets the destination port number.
     /// </summary>
-    public ushort DstPort { get; init; }
+    ushort DstPort,
 
     /// <summary>
     /// Gets the managed buffer containing the raw DNS query data.
     /// </summary>
-    public byte[]? PayloadBuffer { get; init; }
+    byte[]? PayloadBuffer,
 
     /// <summary>
     /// Gets the length of the valid data within the <see cref="PayloadBuffer"/>.
     /// </summary>
-    public int PayloadLength { get; init; }
+    int PayloadLength,
 
     /// <summary>
     /// Gets the WinDivert address information captured with the original packet.
     /// <para>Required to inject the DNS response back into the correct network interface.</para>
     /// </summary>
-    public WinDivertAddress OriginalAddressStruct { get; init; }
-
-    /// <summary>
-    /// Returns the rented <see cref="PayloadBuffer"/> to the shared <see cref="ArrayPool{T}"/>.
-    /// </summary>
-    public void Dispose()
-    {
-        if (PayloadBuffer != null)
-        {
-            ArrayPool<byte>.Shared.Return(PayloadBuffer);
-        }
-        GC.SuppressFinalize(this);
-    }
-}
+    WinDivertAddress OriginalAddressStruct);
