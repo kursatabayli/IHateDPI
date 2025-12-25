@@ -51,7 +51,7 @@ public sealed record EngineConfig
     /// <para>Örnek: <c>2</c> (GET isteğinin ilk 2 harfini ayrı gönderir)</para>
     /// </summary>
     [JsonPropertyName("fragmentHttp")]
-    public int FragmentHttp { get; set; } = 0;
+    public int FragmentHttp { get; set; } = 2;
 
     /// <summary>
     /// HTTPS (TLS ClientHello) istekleri için parçalama boyutu.
@@ -59,18 +59,6 @@ public sealed record EngineConfig
     /// </summary>
     [JsonPropertyName("fragmentHttps")]
     public int FragmentHttps { get; set; } = 2;
-
-    /// <summary>
-    /// Keep-Alive (Kalıcı) HTTP bağlantılarında parçalamanın devam edip etmeyeceği.
-    /// </summary>
-    [JsonPropertyName("fragmentPersistentHttp")]
-    public int FragmentPersistentHttp { get; set; } = 0;
-
-    /// <summary>
-    /// İşletim sistemi seviyesinde TCP parçalaması (Native)
-    /// </summary>
-    [JsonPropertyName("nativeFragmentation")]
-    public bool NativeFragmentation { get; set; } = false;
 
     /// <summary>
     /// Paketleri ters sırada gönderme (Reverse Fragmentation).

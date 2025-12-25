@@ -62,8 +62,6 @@ public partial class IHateDPISettingsView : UserControl, ISaveable
         // --- Fragmentation Strategy ---
         TxtFragHttp.Text = config.FragmentHttp.ToString();
         TxtFragHttps.Text = config.FragmentHttps.ToString();
-        TxtFragPersist.Text = config.FragmentPersistentHttp.ToString();
-        ChkNative.IsChecked = config.NativeFragmentation;
         ChkReverse.IsChecked = config.ReverseFragmentation;
 
         // --- Header Manipulation ---
@@ -94,8 +92,6 @@ public partial class IHateDPISettingsView : UserControl, ISaveable
             // Fragmentation
             FragmentHttp = ParseSafeInt(TxtFragHttp.Text, 0),
             FragmentHttps = ParseSafeInt(TxtFragHttps.Text, 2),
-            FragmentPersistentHttp = ParseSafeInt(TxtFragPersist.Text, 0),
-            NativeFragmentation = ChkNative.IsChecked == true,
             ReverseFragmentation = ChkReverse.IsChecked == true,
 
             // Headers
