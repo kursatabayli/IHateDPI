@@ -69,36 +69,25 @@ These settings determine general connection behaviors and protocol preferences.
 
 Packet fragmentation is one of the most effective ways to bypass DPI systems. By splitting the Request into multiple small packets, it makes it difficult for the DPI device to reassemble them and understand that "This is a request going to a banned site."
 
-### ✅ Active Features
-The following settings are currently active and processed by the engine.
-
 ### `fragmentHttps` (Critical Setting)
-* **Description:** Splits the first packet (ClientHello) in HTTPS connections after the specified number of bytes.
+* **Description:** Splits the first packet (TLS ClientHello) in HTTPS connections (Port 443) after the specified number of bytes.
 * **Default:** `2`
 * **Value Range:**
   * `0`: **Disabled** (Turns off the feature).
   * `1 - 5`: **Recommended Range.** (These values are most effective at confusing DPI systems as they split the TLS header).
 * **Why is it Important?** Even though HTTPS is encrypted, the name of the site being visited (SNI) is sent in plain text during connection establishment. Splitting this packet right at the beginning (e.g., at the 2nd byte) prevents the DPI from reading this header.
 
+### `fragmentHttp`
+* **Description:** Splits HTTP requests (Port 80) after the specified number of bytes.
+* **Default:** `2`
+* * **Value Range:**
+  * `0`: **Disabled** (Turns off the feature).
+* **Smart Detection:** This setting now includes **Persistent (Keep-Alive)** connection support. The engine intelligently detects every HTTP method (GET, POST, etc.) within the TCP stream and fragments them individually, ensuring bypass even for subsequent requests in the same connection.
+
 ### `reverseFragmentation` (Sending in Reverse Order)
 * **Description:** Sends fragmented packets in reverse order (2nd fragment first, then the 1st fragment).
 * **Logic:** The TCP protocol reassembles packets at the destination, so data is not corrupted. However, when the intermediate DPI device sees packets out of order, it gets confused and may allow them to pass without reassembling the content.
 * **Default:** `true`
-
-### 🚧 Features Under Development (Not Yet Active)
-*The following parameters are present in the configuration file, but code integration is not yet complete. Changing these values currently does not affect the engine's operation.*
-
-#### `fragmentHttp`
-* **Status:** 🛠️ *In Development*
-* **Definition:** Determines at which byte to split the initial packet for unencrypted HTTP requests (e.g., to split the "GET" keyword).
-
-#### `fragmentPersistentHttp`
-* **Status:** 🛠️ *In Development*
-* **Definition:** Sets the fragmentation size for subsequent requests in persistent (Keep-Alive) HTTP connections.
-
-#### `nativeFragmentation`
-* **Status:** 🛠️ *In Development*
-* **Definition:** Aims to split packets at the OS level (Native TCP Fragmentation) instead of the application layer.
 
 ---
 
