@@ -20,6 +20,19 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
 {
     private static ReadOnlySpan<byte> HostHeaderSignature => "Host: "u8;
 
+    private static readonly byte[][] HttpMethods =
+    [
+        "GET "u8.ToArray(),
+        "HEAD "u8.ToArray(),
+        "POST "u8.ToArray(),
+        "PUT "u8.ToArray(),
+        "DELETE "u8.ToArray(),
+        "CONNECT "u8.ToArray(),
+        "OPTIONS "u8.ToArray(),
+        "TRACE "u8.ToArray(),
+        "PATCH "u8.ToArray()
+    ];
+
     /// <inheritdoc />
     public unsafe bool Process(PacketContext ctx, ref uint newPacketLen, out bool shouldDrop)
     {
@@ -81,86 +94,69 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
     /// </summary>
     private unsafe bool ProcessHttp(PacketContext ctx, ref uint packetLen)
     {
-        // Early exit if no manipulation is enabled.
-        if (!config.MixHost && !config.HostNoSpace && !config.AdditionalSpace)
-            return false;
-
+        bool isHttp = false;
         var payload = ctx.PayloadSpan;
 
-        // Search for the "Host: " signature (Length: 6 bytes).
-        int index = payload.IndexOf(HostHeaderSignature);
+        foreach (var method in HttpMethods)
+        {
+            if (payload.StartsWith(method))
+            {
+                isHttp = true;
+                break;
+            }
+        }
 
-        // If not found, do nothing.
+        bool modified = false;
+
+        if (config.MixHost || config.HostNoSpace || config.AdditionalSpace)
+            if (ApplyHostManipulation(ref ctx, ref packetLen))
+                modified = true;
+
+        if (isHttp && config.FragmentHttp > 0)
+            if (ApplyFragmentation(ctx, ref packetLen, config.FragmentHttp))
+                return true;
+
+        return modified;
+    }
+
+    private unsafe bool ApplyHostManipulation(ref PacketContext ctx, ref uint packetLen)
+    {
+        var payload = ctx.PayloadSpan;
+        int index = payload.IndexOf(HostHeaderSignature);
         if (index < 0) return false;
 
         bool modified = false;
 
-        // 1. HostNoSpace: "Host: " -> "Host:" (Remove space)
         if (config.HostNoSpace)
         {
-            // The space character is at index 5 relative to the start of "Host: ".
             int spaceIndex = index + 5;
-
-            // Calculate length of data to move.
             int bytesToMove = (int)ctx.PayloadLen - (spaceIndex + 1);
-
             if (bytesToMove > 0)
             {
-                // Shift memory 1 byte LEFT to overwrite the space.
-                // Source: After space -> Destination: At space
                 payload.Slice(spaceIndex + 1, bytesToMove).CopyTo(payload[spaceIndex..]);
-
-                // Decrease packet size (TCP Payload shrunk by 1 byte).
                 DecreasePacketSize(ref ctx, ref packetLen, 1);
-
-                // Update payload reference as the length has changed.
                 payload = ctx.PayloadSpan;
                 modified = true;
             }
         }
 
-        // 2. MixHost: "Host:" -> "host:" (Case randomization)
         if (config.MixHost)
         {
-            // Change 'H' to 'h'.
-            // Note: Even if HostNoSpace ran, 'index' still points to the start of "Host".
             payload[index] = (byte)'h';
             modified = true;
         }
 
-        // 3. AdditionalSpace: "Host:" -> "Host:  " (Append TAB/Space)
-        if (config.AdditionalSpace)
+        if (config.AdditionalSpace && ctx.PacketLen + 1 <= 65535)
         {
-            // Character to add (e.g., TAB - 0x09).
-            byte charToAdd = 0x09;
-
-            // Insertion point: After "Host:".
-            // If HostNoSpace ran, it's at index+5. If not, it's normally at index+6.
-            // For simplicity, find the ':' and insert after it.
             int insertIndex = index + 5;
-
-            // Buffer overflow check (WinDivert MTU is usually large enough, but safety first).
-            if (ctx.PacketLen + 1 <= 65535)
+            int bytesToMove = (int)ctx.PayloadLen - insertIndex;
+            if (bytesToMove > 0)
             {
-                int bytesToMove = (int)ctx.PayloadLen - insertIndex;
-
-                if (bytesToMove > 0)
-                {
-                    // First, increase the packet size.
-                    IncreasePacketSize(ref ctx, ref packetLen, 1);
-
-                    // Refresh payload span.
-                    payload = ctx.PayloadSpan;
-
-                    // Shift memory 1 byte RIGHT to make space.
-                    // Span.CopyTo handles overlapping memory safely.
-                    payload.Slice(insertIndex, bytesToMove).CopyTo(payload[(insertIndex + 1)..]);
-
-                    // Write the character into the newly created gap.
-                    payload[insertIndex] = charToAdd;
-
-                    modified = true;
-                }
+                IncreasePacketSize(ref ctx, ref packetLen, 1);
+                payload = ctx.PayloadSpan;
+                payload.Slice(insertIndex, bytesToMove).CopyTo(payload[(insertIndex + 1)..]);
+                payload[insertIndex] = 0x09;
+                modified = true;
             }
         }
 

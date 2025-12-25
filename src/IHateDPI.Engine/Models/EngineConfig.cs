@@ -49,7 +49,7 @@ public sealed record EngineConfig
     /// <para>Example: <c>2</c> (Sends the first 2 bytes of the GET request separately)</para>
     /// </summary>
     [JsonPropertyName("fragmentHttp")]
-    public int FragmentHttp { get; set; } = 0;
+    public int FragmentHttp { get; set; } = 2;
 
     /// <summary>
     /// Gets or sets the fragmentation size for the initial HTTPS (TLS ClientHello) packet.
@@ -57,18 +57,6 @@ public sealed record EngineConfig
     /// </summary>
     [JsonPropertyName("fragmentHttps")]
     public int FragmentHttps { get; set; } = 2;
-
-    /// <summary>
-    /// Gets or sets the fragmentation size for persistent (Keep-Alive) HTTP connections.
-    /// </summary>
-    [JsonPropertyName("fragmentPersistentHttp")]
-    public int FragmentPersistentHttp { get; set; } = 0;
-
-    /// <summary>
-    /// Gets or sets a value indicating whether to use OS-level (native) TCP fragmentation.
-    /// </summary>
-    [JsonPropertyName("nativeFragmentation")]
-    public bool NativeFragmentation { get; set; } = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether to send fragmented packets in reverse order.
