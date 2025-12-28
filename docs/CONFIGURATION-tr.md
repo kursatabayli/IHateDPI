@@ -26,7 +26,7 @@ Eğer arayüz olmadan doğrudan konsol uygulamasını (`IHateDPI.Engine`) kullan
 
 ---
 
-## 🌐 Ağ ve Bağlantı Ayarları (Network & Connection)
+## 🌐 Ağ ve Bağlantı Ayarları
 
 ### `isDoHEnabled` (DNS over HTTPS)
 * **Açıklama:** DNS sorgularını HTTPS trafiği içine gizler (Şifreli DNS).
