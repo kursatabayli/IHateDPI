@@ -69,36 +69,25 @@ Bu ayarlar genel bağlantı davranışlarını ve protokol tercihlerini belirler
 
 Paket parçalama, DPI sistemlerini atlatmanın en etkili yollarından biridir. İsteği (Request) birden fazla küçük pakete bölerek DPI cihazının "Bu yasaklı bir siteye giden istek" şeklinde birleştirmesini ve anlamasını zorlaştırır.
 
-### ✅ Aktif Özellikler
-Aşağıdaki ayarlar şu anda aktiftir ve motor tarafından işlenmektedir.
-
 ### `fragmentHttps` (Kritik Ayar)
 * **Açıklama:** HTTPS bağlantılarındaki ilk paketi (ClientHello) belirtilen byte sayısından sonra böler.
 * **Varsayılan:** `2`
 * **Değer Aralığı:**
   * `0`: **Devre Dışı** (Özelliği kapatır).
   * `1 - 5`: **Önerilen Aralık.** (Bu değerler TLS başlığını böldüğü için DPI sistemlerini şaşırtmakta en etkili aralıktır).
-* **Neden Önemli?** HTTPS şifreli olsa da, bağlantı kurulurken gidilen sitenin adı açık metin olarak gönderilir. Bu paketi en başından (örneğin 2. byte'tan) bölmek, DPI'ın bu başlığı okuyamamasını sağlar.
+* **Neden Önemli?** HTTPS şifreli olsa da, bağlantı kurulurken gidilen sitenin adı (SNI) açık metin olarak gönderilir. Bu paketi en başından (örneğin 2. byte'tan) bölmek, DPI'ın bu başlığı okuyamamasını sağlar.
+
+### `fragmentHttp`
+* **Açıklama:** Şifresiz HTTP isteklerini (Port 80) belirtilen byte sayısından sonra böler.
+* **Varsayılan:** `2`
+* **Değer Aralığı:**
+  * `0`: **Devre Dışı** (Özelliği kapatır).
+* **Akıllı Tespit:** Bu ayar artık **Kalıcı (Keep-Alive)** bağlantı desteğini de içerir. Motor, TCP akışı içindeki her HTTP metodunu (GET, POST vb.) akıllıca tespit eder ve bunları ayrı ayrı parçalar, böylece aynı bağlantı içindeki sonraki istekler için de atlatma (bypass) sağlar.
 
 ### `reverseFragmentation` (Ters Sırada Gönderme)
 * **Açıklama:** Parçalanmış paketleri ters sırada gönderir (Önce 2. parça, sonra 1. parça).
 * **Mantık:** TCP protokolü paketleri hedefte tekrar birleştirir, yani veri bozulmaz. Ancak aradaki DPI cihazı paketleri sırasız gördüğünde kafası karışır ve içeriği birleştiremeyip geçişine izin verebilir.
 * **Varsayılan:** `true`
-
-### 🚧 Geliştirme Aşamasındaki Özellikler (Henüz Aktif Değil)
-*Aşağıdaki parametreler yapılandırma dosyasında yer almaktadır ancak kod entegrasyonu henüz tamamlanmamıştır. Bu değerleri değiştirmeniz şu an için motorun çalışmasını etkilemez.*
-
-#### `fragmentHttp`
-* **Durum:** 🛠️ *Geliştiriliyor*
-* **Tanım:** Şifresiz HTTP istekleri için ilk paketin kaçıncı byte'tan bölüneceğini belirler (Örn: "GET" kelimesini bölmek için).
-
-#### `fragmentPersistentHttp`
-* **Durum:** 🛠️ *Geliştiriliyor*
-* **Tanım:** Sürekli açık kalan (Keep-Alive) HTTP bağlantılarında sonraki isteklerin parçalanma boyutunu ayarlar.
-
-#### `nativeFragmentation`
-* **Durum:** 🛠️ *Geliştiriliyor*
-* **Tanım:** Paketleri uygulama katmanı yerine işletim sistemi seviyesinde (Native TCP Fragmentation) bölmeyi hedefler.
 
 ---
 
