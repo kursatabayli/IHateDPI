@@ -82,7 +82,7 @@ Paket parçalama, DPI sistemlerini atlatmanın en etkili yollarından biridir. �
 
 ---
 
-## ☠️ Tampon Zehirleme (Buffer Poisoning) 🔥 *YENİ*
+## ☠️ Tampon Zehirleme (Buffer Poisoning)
 
 DPI cihazının belleğini (buffer) "çöp" veriyle doldurarak, gerçek paketi incelemesini engellemeyi amaçlar.
 
