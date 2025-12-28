@@ -12,6 +12,9 @@
 		<AssemblyName>IHateDPI Launcher</AssemblyName>
 		<PublishTrimmed>false</PublishTrimmed>
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<Version>1.0.0</Version>
+		<FileVersion>1.0.0.0</FileVersion>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
