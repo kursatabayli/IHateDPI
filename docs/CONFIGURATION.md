@@ -4,150 +4,144 @@ This document explains the engine settings (`EngineConfig`) of the `IHateDPI` ap
 
 ## ⚙️ Configuration Methods
 
-Depending on the version you are using, you can choose one of the two methods below to change settings:
+You can choose one of the following two methods to change settings, depending on the version you are using:
 
 ### 1. GUI (Launcher) Users
-If you are using the application with the **Launcher (Interface)**, you do not need to deal with the JSON file directly.
-* You can configure everything using the **"Settings"** menu within the application.
+If you are using the application with the **Launcher (GUI)**, you do not need to deal with the JSON file.
+* You can perform all configurations using the **"Settings"** menu within the application.
 * Changes you make are automatically saved to the `engineConfig.json` file by the application.
 
-### 2. Engine-Only (Console) Users
-If you are using the console application (`IHateDPI.Engine`) directly without an interface:
-* Open the **`engineConfig.json`** file located in the program's folder with a text editor (Notepad, VS Code, etc.).
-* Edit the relevant values according to the explanations in this document, save the file, and restart the application.
+### 2. Engine-Only (Console Engine) Users
+If you are using the console application (`IHateDPI.Engine`) directly without the interface:
+* Open the **`engineConfig.json`** file in the program's folder with a text editor (Notepad, VS Code, etc.).
+* Edit the relevant values according to the explanations in this document, save, and restart the application.
 
 ---
 
 ⚠️ **IMPORTANT STARTING NOTE:**
-The blocking technologies (DPI) used by Internet Service Providers (ISPs) vary greatly. **There is no single "Magic Setting" that works for all users.**
-* The default settings are just a starting point.
-* A setting that works perfectly on your network might cut off someone else's internet connection completely.
-* **Solution:** You must understand the parameters below and find the correct combination for your connection through **trial and error**.
+The blocking technologies (DPI) used by Internet Service Providers (ISPs) vary significantly. **There is no single "Magic Setting" that works for all users.**
+* Default settings are just a starting point.
+* A setting that works on your network might cut off someone else's internet.
+* **Solution:** You must understand the parameters below and find the correct combination for your own connection through **trial and error**.
 
 ---
 
 ## 🌐 Network & Connection Settings
 
-These settings determine general connection behaviors and protocol preferences.
-
 ### `isDoHEnabled` (DNS over HTTPS)
-* **Description:** Toggles Secure DNS (DoH) on or off. This feature encrypts your DNS queries by hiding them inside HTTPS traffic.
-* **Default:** `true` (On)
-* **How Should It Be Set?**
-    * **Try Turning Off First:** If you can access blocked sites while this setting is `false` (off), it is recommended to keep it off. This allows you to use your local DNS server, which may result in slightly lower connection latency (ping).
-    * **When to Turn On?** If the site is unreachable while off, redirects to a different "Blocked" page, or the browser gives an "IP address not found" error; this means your ISP is listening to and manipulating your DNS traffic (UDP 53). In this case, you **must turn this setting on**.
+* **Description:** Encapsulates DNS queries within HTTPS traffic (Encrypted DNS).
+* **Default:** `true`
+* **Recommendation:** This setting must be enabled if blocking is done at the DNS level rather than the IP level for banned sites.
 
 ### `dohProviderUrl`
-* **Description:** The server address where encrypted DNS queries will be sent.
-* **⚠️ CRITICAL WARNING:** NEVER write a URL containing a domain name in this field! (e.g., DO NOT WRITE `https://dns.google/dns-query`).
-* **Correct Usage:** The URL must strictly contain an **IP address**.
-    * ✅ Correct: `https://1.1.1.1/dns-query`
-    * ❌ Incorrect: `https://cloudflare-dns.com/dns-query`
-* **Why? (Chicken-and-Egg Problem):** If you write a domain name here, the program tries to resolve its IP address to connect to this server. However, since the DNS server is not running yet, the IP cannot be resolved, and the program locks up.
-* **Default:** `https://1.1.1.1/dns-query` (Cloudflare)
-* **Safe IP Addresses You Can Use:**
+* **Description:** Secure DNS server address.
+* **⚠️ Important:** Do not write a domain name here; use a URL containing an **IP address**.
+* **Default:** `https://1.1.1.1/dns-query`
+* **Alternatives:**
   * Google: `https://8.8.8.8/dns-query`
   * Quad9: `https://9.9.9.9/dns-query`
 
-### `blockQuic` (QUIC/HTTP3 Blocking)
-* **Description:** Blocks the UDP-based QUIC protocol used by browsers (especially Chrome).
-* **Why is it Important?** `IHateDPI` performs packet manipulation over the TCP protocol. Since QUIC uses UDP, it can bypass these manipulations. When this setting is on, browsers are forced to fall back to TCP, allowing DPI evasion techniques to work.
-* **Default:** `true` (On)
+### `blockQuic` (Block QUIC)
+* **Description:** Prevents browsers from using the UDP-based QUIC/HTTP3 protocol and forces them to use TCP.
+* **Default:** `false`
+* **Why Enable?** IHateDPI performs packet manipulations on TCP. If your browser uses QUIC (UDP) when accessing YouTube or Google services, the DPI engine cannot manipulate these packets. In this case, you should set this to `true`.
 
-### `maxPayloadSize` (TCP Payload Size)
+### `maxPayloadSize` (TCP Window Clamping)
 * **Description:** Limits the maximum data size of sent TCP packets (MSS Clamping).
 * **Default:** `1200`
-* **⚠️ Recommendation:** It is **not recommended** to change this setting.
+* **⚠️ Recommendation:** It is **not recommended to change** this setting.
 * **Why?**
-    * The value `1200` is the safest value that ensures packets are transmitted without issues even if you use VPNs or different network tunnels.
-    * **If set too low:** (e.g., 500) Your internet speed will drop significantly.
-    * **If set too high:** (e.g., 1500) Packets may get lost en route or be more easily caught by DPI systems.
+    * The value `1200` is the safest value that ensures packets are transmitted smoothly even if you use VPNs or different network tunnels.
+    * **If Too Low:** (e.g., 500) Your internet speed drops significantly.
+    * **If Too High:** (e.g., 1500) Packets may get lost in transit or get caught by DPI systems more easily.
 
 ---
 
 ## ✂️ Fragmentation Settings
 
-Packet fragmentation is one of the most effective ways to bypass DPI systems. By splitting the Request into multiple small packets, it makes it difficult for the DPI device to reassemble them and understand that "This is a request going to a banned site."
+Packet fragmentation is one of the most effective ways to bypass DPI systems. By splitting the Request into multiple small packets, it makes it difficult for the DPI device to reassemble and understand it as a "Request going to a banned site".
 
-### `fragmentHttps` (Critical Setting)
-* **Description:** Splits the first packet (TLS ClientHello) in HTTPS connections (Port 443) after the specified number of bytes.
-* **Default:** `2`
-* **Value Range:**
-  * `0`: **Disabled** (Turns off the feature).
-  * `1 - 5`: **Recommended Range.** (These values are most effective at confusing DPI systems as they split the TLS header).
-* **Why is it Important?** Even though HTTPS is encrypted, the name of the site being visited (SNI) is sent in plain text during connection establishment. Splitting this packet right at the beginning (e.g., at the 2nd byte) prevents the DPI from reading this header.
+### `autoSplitSni` (Smart SNI Splitting)
+* **Description:** The engine automatically detects the SNI (hostname) information inside the HTTPS packet and splits the packet exactly in the middle.
+* **Default:** `false`
+* **Advantage:** Instead of manually counting bytes with `fragmentHttps`, it ensures the engine splits the packet at the most critical point.
 
-### `fragmentHttp`
-* **Description:** Splits HTTP requests (Port 80) after the specified number of bytes.
-* **Default:** `2`
-* * **Value Range:**
-  * `0`: **Disabled** (Turns off the feature).
-* **Smart Detection:** This setting now includes **Persistent (Keep-Alive)** connection support. The engine intelligently detects every HTTP method (GET, POST, etc.) within the TCP stream and fragments them individually, ensuring bypass even for subsequent requests in the same connection.
+### `fragmentHttps` (Manual HTTPS Splitting)
+* **Description:** Splits the HTTPS (TLS ClientHello) packet after the specified number of bytes.
+* **Default:** `0` (Disabled)
+* **Usage:** If `autoSplitSni` is off or doesn't work, you can perform manual splitting by entering a value between `1` and `5` here.
 
-### `reverseFragmentation` (Sending in Reverse Order)
-* **Description:** Sends fragmented packets in reverse order (2nd fragment first, then the 1st fragment).
-* **Logic:** The TCP protocol reassembles packets at the destination, so data is not corrupted. However, when the intermediate DPI device sees packets out of order, it gets confused and may allow them to pass without reassembling the content.
-* **Default:** `true`
+### `fragmentHttp` (HTTP Splitting)
+* **Description:** Splits unencrypted HTTP requests after the specified number of bytes.
+* **Default:** `0` (Disabled)
+
+### `reverseFragmentation` (Send in Reverse Order)
+* **Description:** Sends split packets in reverse order (2nd part first, then 1st part).
+* **Default:** `false`
+* **Note:** Very effective on Stateful DPI systems, but some modems/routers do not like this.
 
 ---
 
-## 🛠️ Header Manipulation
+## ☠️ Buffer Poisoning
 
-These settings aim to break DPI signatures by changing the text format in the HTTP request. They are only effective on plain HTTP (unencrypted) sites.
+Aims to prevent the examination of the real packet by filling the DPI device's memory (buffer) with "junk" data.
 
-### `mixHost`
-* **Description:** Randomizes the case of the "Host" header.
-* **Example:** `Host: example.com` -> `hOsT: example.com`
-* **Logic:** Servers understand this, but DPI devices are sometimes sensitive only to the exact "Host" keyword.
-* **Default:** `true`
+### ⚠️ CRITICAL OPERATION REQUIREMENT
+**It is MANDATORY for packets to be split for this feature to work.**
+Therefore, if you are going to enable Buffer Poisoning, **at least one** of the following must be done:
+1. ✅ `autoSplitSni`: MUST be **true**
+2. ✅ OR `fragmentHttps`: MUST be **greater than 0**
 
-### `hostNoSpace`
-* **Description:** Removes the space after the colon in the header.
-* **Example:** `Host: example.com` -> `Host:example.com`
-* **Default:** `true`
+If the packet is not split, a "gap" to inject toxic (junk) packets will not be created.
 
-### `additionalSpace`
-* **Description:** Adds an extra space or tab character between the HTTP Method and the URI.
+### `bufferPoisoning`
+* **Description:** Squeezes fake "Junk" packets between fragmented real packets.
 * **Default:** `false`
+
+### Junk Packet Settings:
+* **`junkPacketSize`**: Size of the junk packet (bytes). (Default: `1`)
+* **`junkPacketCount`**: How many junk packets to send. (Default: `1`)
+* **`junkPacketTTL`**: Time To Live of the junk packet. (Default: `5`)
+    * *Logic:* This packet must pass through the DPI but die before reaching the real server.
+* **`junkPacketBadChecksum`**: Corrupts the checksum of the junk packet. (Default: `false`)
+* **`junkPacketBadSequence`**: Corrupts the sequence number of the junk packet. (Default: `false`)
+
+---
+
+## 🛠️ Header Manipulation (HTTP Only)
+
+Bypasses filters by modifying the "Host" header on unencrypted HTTP sites.
+* **`mixHost`**: Makes it `hOsT: example.com`. (Default: `false`)
+* **`hostNoSpace`**: Makes it `Host:example.com` (removes space). (Default: `false`)
+* **`additionalSpace`**: Adds extra space between Method and URI. (Default: `false`)
 
 ---
 
 ## 🎭 Fake Packet Settings
 
-These settings inject "Fake" data packets into the stream to deceive the DPI system. These settings are **advanced**; incorrect configuration can completely cut off your internet connection.
+These settings squeeze "Fake" data packets in between to deceive the DPI system. The settings in this section are **advanced**; incorrect configuration may completely cut off your internet connection.
 
-### `fakePacketTTL` (Time To Live & Auto-Tracking)
+### `fakePacketTTL` (TTL and Auto-Tracking)
 * **Description:** Determines how many hops the fake packet will travel on the network.
-* **Smart Distance Tracking (Auto-Learning):** The application has an embedded **TtlTracker**. This system automatically calculates the distance between you and the target server. The value entered here is a **"Fallback" (Starting)** value used when the system hasn't calculated the distance yet.
+* **Auto-Learning:** There is a **TtlTracker** embedded in the application. This system automatically calculates the distance between you and the target server. The value you enter here is a **"Fallback"** value used when the system hasn't performed a calculation yet.
 * **Default:** `5`
-* **To Disable:** Setting this value to `0` completely **disables** fake packet transmission.
-* **Logic:** The packet must pass through the DPI device but must expire before reaching the real server.
+* **To Disable:** If you set this value to `0`, fake packet transmission is completely **disabled**.
+* **Logic:** The packet must pass through the DPI device but perish before reaching the real server.
 
 ### `badSequence` (Bad Sequence Number)
-* **Description:** Intentionally sends an incorrect TCP Sequence Number for the fake packet.
-* **Risk:** While it enables DPI bypass on some ISPs, it can **completely break internet connectivity** on others.
-* **Recommendation:** Keep it off by default. If other methods don't work, try turning it on; if your connection drops, turn it off again immediately.
+* **Description:** Deliberately sends the fake packet's TCP Sequence Number incorrectly.
+* **Risk:** While it allows bypassing DPI on some ISPs, it can **completely break the internet connection** on others.
+* **Recommendation:** Keep disabled by default. If other methods fail, try enabling it; if your connection drops, disable it again.
 * **Default:** `false`
 
 ### `badCheckSum` (Bad Checksum)
-* **Description:** Sends an incorrect Checksum for the fake packet.
-* **Logic:** DPI systems usually skip this check to save performance and process the packet; however, real servers reject the packet (which is exactly what we want).
+* **Description:** Sends the fake packet's validation code (Checksum) as corrupt.
+* **Logic:** DPI systems generally skip this check to gain performance and accept the packet; however, real servers reject the packet (which is exactly what we want).
 * **Risk:** Just like `badSequence`, some network hardware (modems, routers) may automatically block packets with bad checksums, causing connection issues. Requires trial and error.
 * **Default:** `false`
 
 ### `fakeRequestResendCount`
-* **Description:** Determines how many times the fake packet is sent consecutively.
+* **Description:** Determines how many times the fake packet will be sent consecutively.
 * **Default:** `1`
 * **Recommended Range:** `1 - 3`
-* **Warning:** Increasing this number too much (e.g., to 10) inflates your network traffic unnecessarily and may cause your modem to lock up or crash. Usually, `1` or at most `2` is sufficient.
-
----
-
-## 🧪 How Should You Test? (Strategy Guide)
-
-If the application is not working as expected, please try the following steps to troubleshoot:
-
-1.  **Step 1 (Basic):** Only change the `fragmentHttps` value (`1`, `2`, `3`).
-2.  **Step 2 (Ordering):** Set `reverseFragmentation` to `false`. Some networks do not like out-of-order packets.
-3.  **Step 3 (Risk Zone):** If it still doesn't work, try setting `badCheckSum` or `badSequence` to `true`. **Caution:** If this cuts off your internet, turn it back off immediately.
-4.  **Step 4 (DoH):** If you cannot ping the banned site at all or the IP address cannot be found, `isDoHEnabled` must be `true`.
+* **Warning:** Increasing this number too much (e.g., to 10) unnecessarily bloats your network traffic and may cause your modem to lock up. Generally, `1` or at most `2` is sufficient.
