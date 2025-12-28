@@ -4,13 +4,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" 
-             d:DesignHeight="550" d:DesignWidth="360"
+             d:DesignHeight="700" d:DesignWidth="360"
              Background="Transparent" Foreground="#F8F8F2">
 
     <UserControl.Resources>
         <SolidColorBrush x:Key="BgCard" Color="#343746"/>
         <SolidColorBrush x:Key="AccentPurple" Color="#BD93F9"/>
         <SolidColorBrush x:Key="TextMuted" Color="#6272A4"/>
+
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <Style x:Key="ToggleSwitch" TargetType="CheckBox">
             <Setter Property="Cursor" Value="Hand"/>
@@ -147,6 +149,7 @@
                     <StackPanel>
                         <TextBlock Text="PARÇALAMA" Style="{StaticResource SectionHeader}"/>
                         <CheckBox x:Name="ChkReverse" Content="Reverse Fragmentation" Style="{StaticResource ToggleSwitch}"/>
+                        <CheckBox x:Name="ChkAutoSplitSni" Content="Auto Split SNI" Style="{StaticResource ToggleSwitch}"/>
                         <Grid Margin="0,5,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -155,13 +158,48 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel>
                                 <TextBlock Text="HTTPS Frag" Foreground="{StaticResource TextMuted}" FontSize="9" Margin="0,0,0,2"/>
-                                <TextBox x:Name="TxtFragHttps"/>
+                                <TextBox x:Name="TxtFragHttps" IsEnabled="{Binding ElementName=ChkAutoSplitSni, Path=IsChecked, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="HTTP Frag" Foreground="{StaticResource TextMuted}" FontSize="9" Margin="0,0,0,2"/>
                                 <TextBox x:Name="TxtFragHttp"/>
                             </StackPanel>
                         </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingsCard}">
+                    <StackPanel>
+                        <TextBlock Text="BUFFER POISONING" Style="{StaticResource SectionHeader}"/>
+                        <CheckBox x:Name="ChkBufferPoisoning" Content="Enable Poisoning" Style="{StaticResource ToggleSwitch}"/>
+
+                        <Grid Margin="0,10,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Size" Foreground="{StaticResource TextMuted}" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox x:Name="TxtJunkSize" IsEnabled="{Binding ElementName=ChkBufferPoisoning, Path=IsChecked}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Count" Foreground="{StaticResource TextMuted}" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox x:Name="TxtJunkCount" IsEnabled="{Binding ElementName=ChkBufferPoisoning, Path=IsChecked}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="TTL" Foreground="{StaticResource TextMuted}" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox x:Name="TxtJunkTTL" IsEnabled="{Binding ElementName=ChkBufferPoisoning, Path=IsChecked}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <CheckBox x:Name="ChkJunkBadSum" Content="Bad Checksum" Style="{StaticResource ToggleSwitch}" IsEnabled="{Binding ElementName=ChkBufferPoisoning, Path=IsChecked}"/>
+                        <CheckBox x:Name="ChkJunkBadSeq" Content="Bad Sequence" Style="{StaticResource ToggleSwitch}" IsEnabled="{Binding ElementName=ChkBufferPoisoning, Path=IsChecked}"/>
                     </StackPanel>
                 </Border>
 
@@ -196,6 +234,7 @@
                         </Grid>
                     </StackPanel>
                 </Border>
+
                 <Border Height="20"/>
             </StackPanel>
         </ScrollViewer>
