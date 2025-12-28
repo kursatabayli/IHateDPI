@@ -62,7 +62,16 @@ public partial class IHateDPISettingsView : UserControl, ISaveable
         // --- Fragmentation Strategy ---
         TxtFragHttp.Text = config.FragmentHttp.ToString();
         TxtFragHttps.Text = config.FragmentHttps.ToString();
+        ChkAutoSplitSni.IsChecked = config.AutoSplitSni; // NEW
         ChkReverse.IsChecked = config.ReverseFragmentation;
+
+        // --- Buffer Poisoning (NEW) ---
+        ChkBufferPoisoning.IsChecked = config.BufferPoisoning;
+        TxtJunkSize.Text = config.JunkPacketSize.ToString();
+        TxtJunkCount.Text = config.JunkPacketCount.ToString();
+        TxtJunkTTL.Text = config.JunkPacketTTL.ToString();
+        ChkJunkBadSum.IsChecked = config.JunkPacketBadChecksum;
+        ChkJunkBadSeq.IsChecked = config.JunkPacketBadSequence;
 
         // --- Header Manipulation ---
         ChkMixHost.IsChecked = config.MixHost;
@@ -92,7 +101,16 @@ public partial class IHateDPISettingsView : UserControl, ISaveable
             // Fragmentation
             FragmentHttp = ParseSafeInt(TxtFragHttp.Text, 0),
             FragmentHttps = ParseSafeInt(TxtFragHttps.Text, 2),
+            AutoSplitSni = ChkAutoSplitSni.IsChecked == true, // NEW
             ReverseFragmentation = ChkReverse.IsChecked == true,
+
+            // Buffer Poisoning (NEW)
+            BufferPoisoning = ChkBufferPoisoning.IsChecked == true,
+            JunkPacketSize = ParseSafeInt(TxtJunkSize.Text, 1),
+            JunkPacketCount = (ushort)ParseSafeInt(TxtJunkCount.Text, 1),
+            JunkPacketTTL = ParseSafeInt(TxtJunkTTL.Text, 5),
+            JunkPacketBadChecksum = ChkJunkBadSum.IsChecked == true,
+            JunkPacketBadSequence = ChkJunkBadSeq.IsChecked == true,
 
             // Headers
             MixHost = ChkMixHost.IsChecked == true,
