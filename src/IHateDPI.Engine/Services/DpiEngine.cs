@@ -53,7 +53,7 @@ public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsRes
         string outboundPorts = "((tcp.DstPort == 80 or tcp.DstPort == 443) or udp.DstPort == 443)";
 
         // Add UDP Port 53 if DoH is enabled to intercept DNS queries.
-        if (config.IsDoHEnabled)
+        if (config.IsDohEnabled)
             outboundPorts += " or udp.DstPort == 53";
 
         string outboundRule = $"(outbound and !loopback and {outboundPorts})";
@@ -61,7 +61,7 @@ public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsRes
         // 2. Inbound Traffic Rule (For TTL Tracking)
         // We need to see inbound SYN/ACK packets to calculate the hop count (TTL) from the server.
         string? inboundRule = null;
-        if (config.FakePacketTTL > 0)
+        if (config.FakePacketTtl > 0)
         {
             inboundRule = "(inbound and !loopback and tcp.Syn and tcp.Ack and (tcp.SrcPort == 80 or tcp.SrcPort == 443))";
         }
@@ -107,13 +107,13 @@ public sealed class DpiEngine(IPacketProcessor[] processors, IDnsResolver dnsRes
         _cts = new CancellationTokenSource();
 
         // Start Background Services
-        if (config.IsDoHEnabled)
+        if (config.IsDohEnabled)
         {
             var dohService = new DnsOverHttpsService(dnsChannel.Reader, dnsResolver, this);
             Task.Run(() => dohService.RunAsync(_cts.Token));
         }
 
-        if (config.FakePacketTTL > 0)
+        if (config.FakePacketTtl > 0)
             Task.Run(() => ttlTracker.RunAsync(_cts.Token));
 
         _workerThread = new Thread(PacketLoop)

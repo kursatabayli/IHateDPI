@@ -120,10 +120,15 @@ pub fn get_engine_config(_app: AppHandle) -> Result<EngineConfig, AppError> {
     }
 
     let content = fs::read_to_string(config_path)?;
-    let config = serde_json::from_str::<EngineConfig>(&content)
-        .map_err(|e| AppError::Config(format!("JSON hatası: {}", e)))?;
 
-    Ok(config)
+    match serde_json::from_str::<EngineConfig>(&content) {
+        Ok(config) => Ok(config),
+        Err(e) => {
+            println!("Engine Config JSON hatası (varsayılan yükleniyor): {}", e);
+
+            Ok(EngineConfig::default())
+        }
+    }
 }
 
 #[tauri::command]

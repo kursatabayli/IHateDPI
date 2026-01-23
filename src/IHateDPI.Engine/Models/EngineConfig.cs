@@ -15,14 +15,12 @@ public sealed record EngineConfig
     /// Gets or sets a value indicating whether DNS over HTTPS (DoH) is enabled.
     /// <para>Encrypts DNS queries to prevent censorship at the DNS level.</para>
     /// </summary>
-    [JsonPropertyName("isDoHEnabled")]
-    public bool IsDoHEnabled { get; set; } = true;
+    public bool IsDohEnabled { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the URL of the DNS over HTTPS (DoH) provider.
     /// <para>Default: Cloudflare (https://1.1.1.1/dns-query).</para>
     /// </summary>
-    [JsonPropertyName("dohProviderUrl")]
     public string DohProviderUrl { get; set; } = "https://1.1.1.1/dns-query";
 
     /// <summary>
@@ -32,7 +30,6 @@ public sealed record EngineConfig
     /// this engine to intercept and manipulate packets effectively.
     /// </para>
     /// </summary>
-    [JsonPropertyName("blockQuic")]
     public bool BlockQuic { get; set; } = false;
 
     /// <summary>
@@ -42,14 +39,12 @@ public sealed record EngineConfig
     /// making it harder for DPI systems to reassemble the stream.
     /// </para>
     /// </summary>
-    [JsonPropertyName("maxPayloadSize")]
     public int MaxPayloadSize { get; set; } = 1200;
 
     /// <summary>
     /// Gets or sets the fragmentation size for HTTP (Port 80) packets.
     /// <para>A value of 0 disables this feature.</para>
     /// </summary>
-    [JsonPropertyName("fragmentHttp")]
     public int FragmentHttp { get; set; } = 0;
 
     /// <summary>
@@ -59,7 +54,6 @@ public sealed record EngineConfig
     /// Splitting the ClientHello header prevents DPI from identifying the protocol.
     /// </para>
     /// </summary>
-    [JsonPropertyName("fragmentHttps")]
     public int FragmentHttps { get; set; } = 0;
 
     /// <summary>
@@ -70,7 +64,6 @@ public sealed record EngineConfig
     /// it falls back to a blind split at the first byte.
     /// </para>
     /// </summary>
-    [JsonPropertyName("autoSplitSni")]
     public bool AutoSplitSni { get; set; } = false;
 
     /// <summary>
@@ -80,7 +73,6 @@ public sealed record EngineConfig
     /// that expect sequential flow reassembly.
     /// </para>
     /// </summary>
-    [JsonPropertyName("reverseFragmentation")]
     public bool ReverseFragmentation { get; set; } = false;
 
     /// <summary>
@@ -90,13 +82,11 @@ public sealed record EngineConfig
     /// The junk packet is designed to be accepted by the DPI but rejected by the destination server.
     /// </para>
     /// </summary>
-    [JsonPropertyName("bufferPoisoning")]
     public bool BufferPoisoning { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the size of the injected junk packet (in bytes).
     /// </summary>
-    [JsonPropertyName("junkPacketSize")]
     public int JunkPacketSize { get; set; } = 1;
 
     /// <summary>
@@ -105,7 +95,6 @@ public sealed record EngineConfig
     /// Increasing this count floods the DPI buffer more aggressively but adds network overhead.
     /// </para>
     /// </summary>
-    [JsonPropertyName("junkPacketCount")]
     public ushort JunkPacketCount { get; set; } = 1;
 
     /// <summary>
@@ -115,8 +104,7 @@ public sealed record EngineConfig
     /// If 0, the packet relies on Checksum/Sequence manipulation to be dropped by the server.
     /// </para>
     /// </summary>
-    [JsonPropertyName("junkPacketTTL")]
-    public int JunkPacketTTL { get; set; } = 5;
+    public int JunkPacketTtl { get; set; } = 5;
 
     /// <summary>
     /// Gets or sets a value indicating whether to corrupt the TCP Checksum of the junk packet.
@@ -125,7 +113,6 @@ public sealed record EngineConfig
     /// while many DPI systems (optimizing for speed) might still process it.
     /// </para>
     /// </summary>
-    [JsonPropertyName("junkPacketBadChecksum")]
     public bool JunkPacketBadChecksum { get; set; } = false;
 
     /// <summary>
@@ -134,27 +121,23 @@ public sealed record EngineConfig
     /// Creates overlaps or desynchronization in the DPI state machine without affecting the real stream.
     /// </para>
     /// </summary>
-    [JsonPropertyName("junkPacketBadSequence")]
     public bool JunkPacketBadSequence { get; set; } = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether to randomize the casing of the "Host" header.
     /// <para>Example: "hOsT: example.com"</para>
     /// </summary>
-    [JsonPropertyName("mixHost")]
     public bool MixHost { get; set; } = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether to remove the space after the "Host:" header key.
     /// <para>Example: "Host:example.com"</para>
     /// </summary>
-    [JsonPropertyName("hostNoSpace")]
     public bool HostNoSpace { get; set; } = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether to append a non-standard space or tab character to the "Host" header value.
     /// </summary>
-    [JsonPropertyName("additionalSpace")]
     public bool AdditionalSpace { get; set; } = false;
 
     /// <summary>
@@ -164,25 +147,21 @@ public sealed record EngineConfig
     /// It sends a decoy packet *before* the real connection to trigger DPI filters early.
     /// </para>
     /// </summary>
-    [JsonPropertyName("fakePacketTTL")]
-    public int FakePacketTTL { get; set; } = 5;
+    public int FakePacketTtl { get; set; } = 5;
 
     /// <summary>
     /// Gets or sets a value indicating whether to use invalid sequence numbers for the standalone fake packet.
     /// </summary>
-    [JsonPropertyName("badSequence")]
     public bool BadSequence { get; set; } = false;
 
     /// <summary>
     /// Gets or sets a value indicating whether to use invalid checksums for the standalone fake packet.
     /// </summary>
-    [JsonPropertyName("badCheckSum")]
     public bool BadCheckSum { get; set; } = false;
 
     /// <summary>
     /// Gets or sets the number of times to re-transmit the standalone fake packet.
     /// </summary>
-    [JsonPropertyName("fakeRequestResendCount")]
     public int FakeRequestResendCount { get; set; } = 1;
 }
 
@@ -192,6 +171,7 @@ public sealed record EngineConfig
 /// Required for Native AOT compatibility and aggressive assembly trimming.
 /// </para>
 /// </summary>
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(EngineConfig))]
 internal partial class AppConfigContext : JsonSerializerContext
 {

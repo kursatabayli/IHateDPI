@@ -204,7 +204,7 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
         }
 
         // Legacy: Send a fake packet to trigger DPI filters early (if configured).
-        if (config.FakePacketTTL > 0 || config.BadCheckSum || config.BadSequence)
+        if (config.FakePacketTtl > 0 || config.BadCheckSum || config.BadSequence)
         {
             // Note: Ideally, SNI should be parsed here. 
             // Using a generic fake payload is usually sufficient to prime the DPI state.
@@ -316,11 +316,11 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
             // 3. TTL Configuration
             // For Desync, we usually want the packet to reach the DPI but not the server (TTL manipulation).
             // For Overlap, we want it to die right after the DPI.
-            if (config.JunkPacketTTL > 0)
+            if (config.JunkPacketTtl > 0)
             {
                 int autoTtl = ttlTracker.GetCalculatedTtl(
-                    ctx.IpHdr->DstAddr, ctx.IpHdr->SrcAddr, ctx.TcpHdr->DstPort, ctx.TcpHdr->SrcPort, config.JunkPacketTTL);
-                ip->TTL = autoTtl > 0 ? (byte)autoTtl : (byte)config.JunkPacketTTL;
+                    ctx.IpHdr->DstAddr, ctx.IpHdr->SrcAddr, ctx.TcpHdr->DstPort, ctx.TcpHdr->SrcPort, config.JunkPacketTtl);
+                ip->TTL = autoTtl > 0 ? (byte)autoTtl : (byte)config.JunkPacketTtl;
             }
             else
             {
@@ -418,11 +418,11 @@ public sealed class TcpPacketProcessor(EngineConfig config, ITtlTracker ttlTrack
             // --- Apply Evasion Techniques ---
 
             // 1. TTL Manipulation
-            if (config.FakePacketTTL > 0)
+            if (config.FakePacketTtl > 0)
             {
                 int autoTtl = ttlTracker.GetCalculatedTtl(
-                    ctx.IpHdr->DstAddr, ctx.IpHdr->SrcAddr, ctx.TcpHdr->DstPort, ctx.TcpHdr->SrcPort, config.FakePacketTTL);
-                fakeIp->TTL = autoTtl > 0 ? (byte)autoTtl : (byte)config.FakePacketTTL;
+                    ctx.IpHdr->DstAddr, ctx.IpHdr->SrcAddr, ctx.TcpHdr->DstPort, ctx.TcpHdr->SrcPort, config.FakePacketTtl);
+                fakeIp->TTL = autoTtl > 0 ? (byte)autoTtl : (byte)config.FakePacketTtl;
             }
             else
             {

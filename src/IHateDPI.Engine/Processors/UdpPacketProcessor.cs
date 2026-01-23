@@ -78,7 +78,7 @@ public sealed class UdpPacketProcessor(EngineConfig config, ChannelWriter<DnsReq
         shouldDrop = false;
 
         // If DoH is disabled or the payload is empty, ignore.
-        if (!config.IsDoHEnabled || ctx.PayloadLen <= 0)
+        if (!config.IsDohEnabled || ctx.PayloadLen <= 0)
             return false;
 
         // Rent a buffer from the shared pool to avoid allocations during hot-path processing.
