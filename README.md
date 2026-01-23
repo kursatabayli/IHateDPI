@@ -39,15 +39,22 @@ For a detailed explanation of all engine settings, parameters, packet manipulati
 
 ---
 
-## GoodbyeDPI Integration
+## External Engine Support
 
-IHateDPI Launcher allows you to use the original **GoodbyeDPI** software as the engine if desired. This allows you to easily switch between the two engines.
+IHateDPI Launcher has evolved into a **Universal Launcher**. You are no longer limited to the built-in engine; you can now integrate and manage any CLI-based DPI evasion tool (such as GoodbyeDPI, Zapret, Byedpi, etc.) directly through this modern interface.
 
-**How to Use:**
-1.  Download the original GoodbyeDPI files.
-2.  Copy the downloaded files (including the `x86_64` folder and `.cmd` files) into the `Engines/GoodbyeDPI` folder located in the application's directory.
-3.  Open IHateDPI Launcher and go to the **Settings** menu.
-4.  Select **GoodbyeDPI** from the engine selection screen and choose the `.cmd` file you wish to run from the list.
+Eliminate the need to deal with multiple console windows and manage everything from a single, unified dashboard.
+
+### Configuration
+
+Navigate to the **"External Engine"** tab in the Settings menu:
+
+1.  **Select Executable (`.exe`):** Browse and select the core executable of the tool you wish to use (e.g., `goodbyedpi.exe`).
+2.  **Script Integration (`.cmd`, `.bat`):** If you have a pre-configured script file (e.g., `1_russia_blacklist_dnsredir.cmd`), you can select it directly. The launcher will handle the execution automatically.
+3.  **Manual Arguments:** Alternatively, you can input raw launch arguments (e.g., `-9 --dns-addr 1.1.1.1`) directly into the manual arguments field.
+
+> **For GoodbyeDPI Users:**
+> Simply download the original GoodbyeDPI files. In IHateDPI settings, point the "Executable" to `x86_64/goodbyedpi.exe` and select your preferred `.cmd` file as the "Script Path". That's it!
 
 ---
 
@@ -55,7 +62,7 @@ IHateDPI Launcher allows you to use the original **GoodbyeDPI** software as the 
 
 This tool is designed as "Portable". It does not require any installation.
 
-1.  Download either `IHateDPI-v1.0.0-beta.1-win-x64.zip` (recommended) or `IHateDPI-Engine-v1.0.0-beta.1-win-x64.zip` from the [Releases](https://github.com/kursatabayli/IHateDPI/releases) page.
+1.  Download either `IHateDPI-vx.x.x-win-x64.zip` (recommended) or `IHateDPI-Engine-vx.x.x-win-x64.zip` from the [Releases](https://github.com/kursatabayli/IHateDPI/releases) page.
 2.  Extract the Zip file to a folder.
 3.  Right-click on `IHateDPI Launcher.exe` (recommended) or `IHateDPI Engine.exe` and select **"Run as Administrator"**.
 4.  Starting the Application:
