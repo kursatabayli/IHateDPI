@@ -8,7 +8,6 @@ use tauri::{
 };
 
 pub fn init(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-    // Varsayılan (İngilizce) ile başlat
     let default_locales = TrayLocales::default();
 
     let toggle_i = MenuItem::with_id(app, "toggle", &default_locales.start, true, None::<&str>)?;
@@ -26,23 +25,20 @@ pub fn init(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
             }
             "toggle" => {
                 let state = app.state::<EngineState>();
-                // Hafızadaki güncel dili çekiyoruz
                 let locale_state = app.state::<Mutex<TrayLocales>>();
                 let locales = locale_state.lock().unwrap();
 
                 let running = is_engine_running(state.clone());
                 let new_text;
 
-                // Motor durumunu değiştir
                 if running {
                     let _ = stop_engine(app.clone(), state.clone());
-                    new_text = &locales.start; // Güncel dildeki "Başlat"
+                    new_text = &locales.start;
                 } else {
                     let _ = start_engine(app.clone(), state.clone());
-                    new_text = &locales.stop; // Güncel dildeki "Durdur"
+                    new_text = &locales.stop;
                 }
 
-                // Menüyü güncelle
                 if let Some(tray) = app.tray_by_id("main") {
                     if let Ok(toggle_item) =
                         MenuItem::with_id(app, "toggle", new_text, true, None::<&str>)

@@ -15,10 +15,8 @@ pub struct EngineState {
     pub process: Mutex<Option<Child>>,
 }
 
-/// Script dosyasından (cmd/bat) argümanları okur
 fn extract_args_from_file(file_path: &str, exe_path: &str) -> Vec<String> {
     let path = PathBuf::from(file_path);
-    // EXE adını yoldan ayıkla (örn: "C:\...\goodbyedpi.exe" -> "goodbyedpi.exe")
     let exe_name = PathBuf::from(exe_path)
         .file_name()
         .unwrap_or_default()
@@ -30,13 +28,10 @@ fn extract_args_from_file(file_path: &str, exe_path: &str) -> Vec<String> {
         for line in reader.lines() {
             if let Ok(l) = line {
                 let clean = l.trim();
-                // Yorum satırlarını ve boş satırları atla
                 if clean.is_empty() || clean.starts_with("REM") || clean.starts_with("::") {
                     continue;
                 }
 
-                // Satır içinde exe adını ara (büyük/küçük harf duyarsız)
-                // Örn: "goodbyedpi.exe -9 --dns-addr..." satırında "-9..." kısmını alır
                 if let Some(idx) = clean.to_lowercase().find(&exe_name.to_lowercase()) {
                     let args_str = &clean[idx + exe_name.len()..];
                     return args_str.split_whitespace().map(|s| s.to_string()).collect();
@@ -61,9 +56,7 @@ pub fn start_engine(app: AppHandle, state: State<EngineState>) -> Result<String,
     let config = get_app_config(app.clone())?;
     let child_process: Child;
 
-    // AKTİF MOTOR SEÇİMİ
     if config.active_engine_id == "internal" {
-        // --- 1. DAHİLİ MOTOR (IHateDPI) ---
         let base_dir = get_install_dir();
         let exe_path = base_dir
             .join("Engines")
@@ -74,8 +67,6 @@ pub fn start_engine(app: AppHandle, state: State<EngineState>) -> Result<String,
             return Err(AppError::NotFound("IHateDPI Engine.exe bulunamadı!".into()));
         }
 
-        // Çalışma dizinini exe'nin olduğu klasör yapıyoruz.
-        // base_dir zaten bir değişken olduğu için referansı geçerlidir.
         let work_dir = exe_path.parent().unwrap_or(&base_dir);
 
         child_process = Command::new(&exe_path)
@@ -86,8 +77,6 @@ pub fn start_engine(app: AppHandle, state: State<EngineState>) -> Result<String,
             .stderr(Stdio::null())
             .spawn()?;
     } else {
-        // --- 2. HARİCİ MOTORLAR (Kullanıcı Tanımlı) ---
-
         let engine = config
             .external_engines
             .iter()
@@ -123,9 +112,6 @@ pub fn start_engine(app: AppHandle, state: State<EngineState>) -> Result<String,
             }
         }
 
-        // DÜZELTME BURADA YAPILDI:
-        // &PathBuf::from(".") yerine std::path::Path::new(".") kullanıldı.
-        // Bu sayede geçici değer hatası (temporary value dropped) oluşmaz.
         let work_dir = exe_path.parent().unwrap_or(std::path::Path::new("."));
 
         child_process = Command::new(&exe_path)
@@ -152,7 +138,6 @@ pub fn stop_engine(app: AppHandle, state: State<EngineState>) -> Result<String, 
     if let Some(mut child) = process_guard.take() {
         let mut graceful_exit = false;
 
-        // stdin varsa (IHateDPI gibi) "STOP" komutu dene
         if let Some(stdin) = child.stdin.as_mut() {
             if stdin.write_all(b"STOP\n").is_ok() {
                 std::thread::sleep(std::time::Duration::from_secs(1));
@@ -162,7 +147,6 @@ pub fn stop_engine(app: AppHandle, state: State<EngineState>) -> Result<String, 
             }
         }
 
-        // Zorla kapat
         if !graceful_exit {
             let _ = child.kill();
         }
