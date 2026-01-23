@@ -26,35 +26,27 @@ Eğer arayüz olmadan doğrudan konsol uygulamasını (`IHateDPI.Engine`) kullan
 
 ---
 
-## 🌐 Ağ ve Bağlantı Ayarları (Network & Connection)
-
-Bu ayarlar genel bağlantı davranışlarını ve protokol tercihlerini belirler.
+## 🌐 Ağ ve Bağlantı Ayarları
 
 ### `isDoHEnabled` (DNS over HTTPS)
-* **Açıklama:** Güvenli DNS (DoH) özelliğini açıp kapatır. Bu özellik, DNS sorgularınızı HTTPS trafiği içine gizleyerek şifreler.
-* **Varsayılan:** `true` (Açık)
-* **Nasıl Ayarlanmalı?**
-    * **Önce Kapatıp Deneyin:** Eğer bu ayar `false` (kapalı) iken yasaklı sitelere erişebiliyorsanız, kapalı tutmanız önerilir. Bu sayede yerel DNS sunucunuzu kullanacağınız için bağlantı tepki süreniz (ping/latency) biraz daha düşük olabilir.
-    * **Ne Zaman Açılmalı?** Eğer ayar kapalıyken siteye hiç ulaşılamıyor, farklı bir "Engellendi" sayfasına yönlendiriliyor veya tarayıcı "IP adresi bulunamadı" hatası veriyorsa; ISS'iniz DNS trafiğinizi (UDP 53) dinliyor ve manipüle ediyor demektir. Bu durumda bu ayarı **mutlaka açmalısınız**.
+* **Açıklama:** DNS sorgularını HTTPS trafiği içine gizler (Şifreli DNS).
+* **Varsayılan:** `true`
+* **Öneri:** Yasaklı sitelere IP seviyesinde değil de DNS seviyesinde engelleme yapılıyorsa bu ayar mutlaka açık olmalıdır.
 
 ### `dohProviderUrl`
-* **Açıklama:** DNS sorgularının şifreli olarak gönderileceği sunucu adresi.
-* **⚠️ ÇOK ÖNEMLİ UYARI:** Bu alana **ASLA** alan adı (domain) içeren bir URL yazmayın! (Örneğin: `https://dns.google/dns-query` YAZMAYIN).
-* **Doğru Kullanım:** URL mutlaka **IP adresi** içermelidir.
-    * ✅ Doğru: `https://1.1.1.1/dns-query`
-    * ❌ Yanlış: `https://cloudflare-dns.com/dns-query`
-* **Neden? (Tavuk-Yumurta Problemi):** Eğer buraya bir alan adı yazarsanız, program bu sunucuya bağlanmak için önce onun IP adresini bulmaya çalışır. Ancak DNS sunucusu henüz çalışmadığı için IP çözülemez ve program kilitlenir.
-* **Varsayılan:** `https://1.1.1.1/dns-query` (Cloudflare)
-* **Kullanabileceğiniz Güvenli IP Adresleri:**
+* **Açıklama:** Güvenli DNS sunucusu adresi.
+* **⚠️ Önemli:** Buraya alan adı (domain) yazmayın, **IP adresi** içeren URL kullanın.
+* **Varsayılan:** `https://1.1.1.1/dns-query`
+* **Alternatifler:**
   * Google: `https://8.8.8.8/dns-query`
   * Quad9: `https://9.9.9.9/dns-query`
 
-### `blockQuic` (QUIC/HTTP3 Engelleme)
-* **Açıklama:** Tarayıcıların (özellikle Chrome) kullandığı UDP tabanlı QUIC protokolünü engeller.
-* **Neden Önemli?** `IHateDPI` paket manipülasyonlarını TCP protokolü üzerinde gerçekleştirir. QUIC protokolü UDP kullandığı için bu manipülasyonlardan kaçabilir. Bu ayar açık olduğunda, tarayıcılar TCP'ye geri dönmeye (fallback) zorlanır ve DPI atlatma teknikleri işe yarar.
-* **Varsayılan:** `true` (Açık)
+### `blockQuic` (QUIC Engelleme)
+* **Açıklama:** Tarayıcıların UDP tabanlı QUIC/HTTP3 protokolünü kullanmasını engeller ve onları TCP kullanmaya zorlar.
+* **Varsayılan:** `false`
+* **Neden Açılmalı?** IHateDPI, paket manipülasyonlarını TCP üzerinde yapar. Eğer tarayıcınız YouTube veya Google servislerine girerken QUIC (UDP) kullanırsa, DPI motoru bu paketleri manipüle edemez. Bu durumda bu ayarı `true` yapmalısınız.
 
-### `maxPayloadSize` (TCP Veri Boyutu)
+### `maxPayloadSize` (TCP Window Clamping)
 * **Açıklama:** Gönderilen TCP paketlerinin maksimum veri boyutunu sınırlar (MSS Clamping).
 * **Varsayılan:** `1200`
 * **⚠️ Öneri:** Bu ayarı **değiştirmeniz önerilmez.**
@@ -69,46 +61,59 @@ Bu ayarlar genel bağlantı davranışlarını ve protokol tercihlerini belirler
 
 Paket parçalama, DPI sistemlerini atlatmanın en etkili yollarından biridir. İsteği (Request) birden fazla küçük pakete bölerek DPI cihazının "Bu yasaklı bir siteye giden istek" şeklinde birleştirmesini ve anlamasını zorlaştırır.
 
-### `fragmentHttps` (Kritik Ayar)
-* **Açıklama:** HTTPS bağlantılarındaki ilk paketi (ClientHello) belirtilen byte sayısından sonra böler.
-* **Varsayılan:** `2`
-* **Değer Aralığı:**
-  * `0`: **Devre Dışı** (Özelliği kapatır).
-  * `1 - 5`: **Önerilen Aralık.** (Bu değerler TLS başlığını böldüğü için DPI sistemlerini şaşırtmakta en etkili aralıktır).
-* **Neden Önemli?** HTTPS şifreli olsa da, bağlantı kurulurken gidilen sitenin adı (SNI) açık metin olarak gönderilir. Bu paketi en başından (örneğin 2. byte'tan) bölmek, DPI'ın bu başlığı okuyamamasını sağlar.
+### `autoSplitSni` (Akıllı SNI Bölme)
+* **Açıklama:** Motor, HTTPS paketinin içindeki SNI (gidilen sitenin adı) bilgisini otomatik tespit eder ve paketi tam ortasından ikiye böler.
+* **Varsayılan:** `false`
+* **Avantajı:** `fragmentHttps` ile manuel byte saymak yerine, motorun paketi en kritik noktadan bölmesini sağlar.
 
-### `fragmentHttp`
-* **Açıklama:** Şifresiz HTTP isteklerini (Port 80) belirtilen byte sayısından sonra böler.
-* **Varsayılan:** `2`
-* **Değer Aralığı:**
-  * `0`: **Devre Dışı** (Özelliği kapatır).
-* **Akıllı Tespit:** Bu ayar artık **Kalıcı (Keep-Alive)** bağlantı desteğini de içerir. Motor, TCP akışı içindeki her HTTP metodunu (GET, POST vb.) akıllıca tespit eder ve bunları ayrı ayrı parçalar, böylece aynı bağlantı içindeki sonraki istekler için de atlatma (bypass) sağlar.
+### `fragmentHttps` (Manuel HTTPS Bölme)
+* **Açıklama:** HTTPS (TLS ClientHello) paketini belirtilen byte sayısından sonra böler.
+* **Varsayılan:** `0` (Kapalı)
+* **Kullanımı:** Eğer `autoSplitSni` kapalıysa veya işe yaramıyorsa, buraya `1` ile `5` arasında bir değer girerek manuel bölme yapabilirsiniz.
+
+### `fragmentHttp` (HTTP Bölme)
+* **Açıklama:** Şifresiz HTTP isteklerini belirtilen byte sayısından sonra böler.
+* **Varsayılan:** `0` (Kapalı)
 
 ### `reverseFragmentation` (Ters Sırada Gönderme)
-* **Açıklama:** Parçalanmış paketleri ters sırada gönderir (Önce 2. parça, sonra 1. parça).
-* **Mantık:** TCP protokolü paketleri hedefte tekrar birleştirir, yani veri bozulmaz. Ancak aradaki DPI cihazı paketleri sırasız gördüğünde kafası karışır ve içeriği birleştiremeyip geçişine izin verebilir.
-* **Varsayılan:** `true`
+* **Açıklama:** Bölünen paketleri ters sırada gönderir (Önce 2. parça, sonra 1. parça).
+* **Varsayılan:** `false`
+* **Not:** Durum denetimli (Stateful) DPI sistemlerinde çok etkilidir ancak bazı modemler/routerlar bunu sevmez.
 
 ---
 
-## 🛠️ Başlık Manipülasyonu (Header Manipulation)
+## ☠️ Tampon Zehirleme (Buffer Poisoning)
 
-Bu ayarlar, HTTP isteğindeki metin formatını değiştirerek DPI imzalarını (signatures) bozmayı hedefler. Sadece düz HTTP (şifresiz) sitelerde etkilidir.
+DPI cihazının belleğini (buffer) "çöp" veriyle doldurarak, gerçek paketi incelemesini engellemeyi amaçlar.
 
-### `mixHost`
-* **Açıklama:** "Host" başlığını rastgele büyük/küçük harf yapar.
-* **Örnek:** `Host: example.com` -> `hOsT: example.com`
-* **Mantık:** Sunucular bunu anlar ama DPI cihazları bazen sadece "Host" kelimesine duyarlıdır.
-* **Varsayılan:** `true`
+### ⚠️ KRİTİK ÇALIŞMA ŞARTI
+**Bu özelliğin çalışabilmesi için paketlerin bölünmüş olması ZORUNLUDUR.**
+Yani Buffer Poisoning'i açacaksanız aşağıdakilerden **en az biri** yapılmış olmalıdır:
+1.  ✅ `autoSplitSni`: **true** OLMALI
+2.  ✅ VEYA `fragmentHttps`: **0'dan büyük** OLMALI
 
-### `hostNoSpace`
-* **Açıklama:** Başlıktaki iki nokta üst üsteden sonraki boşluğu siler.
-* **Örnek:** `Host: example.com` -> `Host:example.com`
-* **Varsayılan:** `true`
+Eğer paket bölünmezse, araya zehirli (junk) paket enjekte edilecek bir "aralık" oluşmaz.
 
-### `additionalSpace`
-* **Açıklama:** HTTP Metodu ile URI arasına fazladan boşluk veya tab karakteri ekler.
+### `bufferPoisoning`
+* **Açıklama:** Parçalanmış gerçek paketlerin arasına sahte "Junk" (Çöp) paketler sıkıştırır.
 * **Varsayılan:** `false`
+
+### Zehirli Paket Ayarları:
+* **`junkPacketSize`**: Çöp paketin boyutu (byte). (Varsayılan: `1`)
+* **`junkPacketCount`**: Kaç adet çöp paket gönderileceği. (Varsayılan: `1`)
+* **`junkPacketTTL`**: Çöp paketin yaşam süresi. (Varsayılan: `5`)
+    * *Mantık:* Bu paket DPI'dan geçmeli ama gerçek sunucuya varmadan ölmelidir.
+* **`junkPacketBadChecksum`**: Çöp paketin doğrulama kodunu bozar. (Varsayılan: `false`)
+* **`junkPacketBadSequence`**: Çöp paketin sıra numarasını bozar. (Varsayılan: `false`)
+
+---
+
+## 🛠️ Başlık Manipülasyonu (Sadece HTTP)
+
+Şifresiz HTTP sitelerinde "Host" başlığını değiştirerek filtreleri atlatır.
+* **`mixHost`**: `hOsT: example.com` yapar. (Varsayılan: `false`)
+* **`hostNoSpace`**: `Host:example.com` yapar (boşluğu siler). (Varsayılan: `false`)
+* **`additionalSpace`**: Metot ile URI arasına fazladan boşluk ekler. (Varsayılan: `false`)
 
 ---
 
@@ -140,14 +145,3 @@ Bu ayarlar, DPI sistemini kandırmak için araya "Fake" (Sahte) veri paketleri s
 * **Varsayılan:** `1`
 * **Önerilen Aralık:** `1 - 3`
 * **Uyarı:** Bu sayıyı çok artırmak (örneğin 10 yapmak), ağ trafiğinizi gereksiz yere şişirir ve modeminizin kilitlenmesine neden olabilir. Genelde `1` veya en fazla `2` yeterlidir.
-
----
-
-## 🧪 Nasıl Deneme Yapmalısınız? (Strateji Rehberi)
-
-Eğer bağlantı sorunu yaşıyorsanız, lütfen önce aşağıdaki çözüm yollarını deneyin:
-
-1.  **Adım 1 (Temel):** Sadece `fragmentHttps` değerini değiştirin (`1`, `2`, `3`).
-2.  **Adım 2 (Sıralama):** `reverseFragmentation` ayarını `false` yapın. Bazı ağlar ters paket sevmez.
-3.  **Adım 3 (Riskli Bölge):** Hala girmiyorsa `badCheckSum` veya `badSequence` ayarlarını `true` yapın. **Dikkat:** Bu interneti keserse hemen geri kapatın.
-4.  **Adım 4 (DoH):** Yasaklı siteye hiç ping atamıyorsanız veya IP adresi bulunamıyorsa `isDoHEnabled` mutlaka `true` olmalıdır.
