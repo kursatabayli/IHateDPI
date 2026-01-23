@@ -1,0 +1,12 @@
+[
+  {
+    "code": "en-US",
+    "name": "English (US)",
+    "flagCode": "us"
+  },
+  {
+    "code": "tr-TR",
+    "name": "Türkçe",
+    "flagCode": "tr"
+  }
+]
