@@ -39,15 +39,22 @@ Tüm motor ayarlarının, parametrelerin, paket manipülasyon stratejilerinin ve
 
 ---
 
-## GoodbyeDPI Entegrasyonu
+## Harici Motor Desteği (External Engine)
 
-IHateDPI Launcher, dilerseniz motor olarak orijinal **GoodbyeDPI** yazılımını da kullanmanıza olanak tanır. Bu sayede iki motor arasında kolayca geçiş yapabilirsiniz.
+IHateDPI Launcher, artık **evrensel bir başlatıcı (Universal Launcher)** yeteneğine sahiptir. Sadece kendi motorunu değil, parametre ile çalışabilen diğer popüler DPI atlatma araçlarını (GoodbyeDPI, Zapret, Byedpi vb.) da bu arayüz üzerinden yönetebilirsiniz.
 
-**Nasıl Kullanılır?**
-1.  Orijinal GoodbyeDPI dosyalarını indirin.
-2.  İndirdiğiniz dosyaları (x86_64 klasörü ve .cmd dosyaları dahil) uygulamanın kurulu olduğu dizindeki `Engines/GoodbyeDPI` klasörüne kopyalayın.
-3.  IHateDPI Launcher'ı açın, **Ayarlar** menüsüne gidin.
-4.  Motor seçim ekranından **GoodbyeDPI**'ı seçin ve listeden çalıştırmak istediğiniz `.cmd` dosyasını belirleyin.
+Bu özellik sayesinde, farklı araçlar için ayrı ayrı siyah ekranlarla (CMD) uğraşmak yerine, hepsini tek bir modern arayüzden yönetebilirsiniz.
+
+### Nasıl Yapılandırılır?
+
+Ayarlar menüsünden **"Harici Motor (External)"** sekmesine giderek şu yapılandırmaları yapabilirsiniz:
+
+1.  **Motor Seçimi (`.exe`):** Çalıştırmak istediğiniz herhangi bir CLI uygulamasını (örneğin `goodbyedpi.exe`) seçin.
+2.  **Script/Config Desteği (`.cmd`, `.bat`):** Eğer elinizde hazır ayarların olduğu bir script dosyası varsa (örneğin `1_russia_blacklist_dnsredir.cmd`), bunu doğrudan seçebilirsiniz. Launcher, ilgili scripti otomatik olarak ayrıştırır ve çalıştırır.
+3.  **Manuel Parametreler:** Script dosyası kullanmak istemiyorsanız, çalıştırma parametrelerini (örneğin `-9 --dns-addr 1.1.1.1`) doğrudan arayüzdeki kutucuğa girebilirsiniz.
+
+> **GoodbyeDPI Kullanıcıları İçin:**
+> Orijinal GoodbyeDPI klasörünü bilgisayarınızda herhangi bir yere indirin. IHateDPI ayarlarından `x86_64/goodbyedpi.exe` dosyasını seçin ve dilediğiniz `.cmd` dosyasını "Script Yolu" olarak gösterin. Hepsi bu kadar!
 
 ---
 
@@ -55,7 +62,7 @@ IHateDPI Launcher, dilerseniz motor olarak orijinal **GoodbyeDPI** yazılımın�
 
 Bu araç "Taşınabilir (Portable)" olarak tasarlanmıştır. Herhangi bir kurulum gerektirmez.
 
-1.  [Releases](https://github.com/kursatabayli/IHateDPI/releases) sayfasından `IHateDPI-v1.0.0-beta.1-win-x64.zip` (önerilen) veya `IHateDPI-Engine-v1.0.0-beta.1-win-x64.zip` paketlerinden birini indirin.
+1.  [Releases](https://github.com/kursatabayli/IHateDPI/releases) sayfasından en son sürümü bulun ve `IHateDPI-vx.x.x-win-x64.zip` (önerilen) veya `IHateDPI-Engine-vx.x.x-win-x64.zip` paketlerinden birini indirin.
 2.  Zip dosyasını bir klasöre çıkartın.
 3.  `IHateDPI Launcher.exe` (önerilen) veya `IHateDPI Engine.exe` dosyasına sağ tıklayıp **"Yönetici Olarak Çalıştır"** seçeneğini kullanın.
 4.  Kullanıma Başlama:
