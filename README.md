@@ -22,7 +22,15 @@ This project is a **.NET 9** based, modern, performance-oriented, and open-sourc
 
 ---
 
-## ⚙️ Configuration & Troubleshooting
+## Technical Analysis & Research
+
+Interested in the engineering behind DPI evasion? We have published a comprehensive technical report detailing the anatomy of Deep Packet Inspection systems, TLS handshake manipulation strategies, and specific ISP behaviors observed during development.
+
+* 📄 **[Read the Technical Case Study](docs/TECHNICAL_REPORT_EN.md)**
+
+---
+
+## Configuration & Troubleshooting
 
 For a detailed explanation of all engine settings, parameters, packet manipulation strategies, and troubleshooting steps, please refer to the dedicated configuration guide:
 
