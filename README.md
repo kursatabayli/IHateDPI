@@ -22,9 +22,11 @@ This project is a **.NET 9** based, modern, performance-oriented, and open-sourc
 
 ---
 
-## Technical Analysis & Research
+## Technical Architecture & Case Analysis
 
-Interested in the engineering behind DPI evasion? We have published a comprehensive technical report detailing the anatomy of Deep Packet Inspection systems, TLS handshake manipulation strategies, and specific ISP behaviors observed during development.
+A detailed report has been prepared regarding the technical data gathered during the development process, the working principles of DPI systems, and TLS handshake manipulations.
+
+You can access this technical paper, covering ISP behavior analysis and protocol-level insights, below:
 
 * 📄 **[Read the Technical Case Study](docs/TECHNICAL_REPORT_EN.md)**
 
