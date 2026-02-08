@@ -22,7 +22,17 @@ Bu proje **.NET 9** tabanlı, modern, performans odaklı ve açık kaynaklı bir
 
 ---
 
-## ⚙️ Yapılandırma ve Sorun Giderme
+## Teknik Mimari ve Vaka Analizi
+
+Projenin geliştirilme sürecinde elde edilen teknik veriler, DPI sistemlerinin çalışma prensipleri ve TLS el sıkışması (handshake) manipülasyonları üzerine detaylı bir rapor hazırlanmıştır.
+
+İSS'lerin davranış analizlerini ve protokol seviyesindeki çözümlemeleri içeren bu teknik yazıya aşağıdan ulaşabilirsiniz:
+
+* 📄 **[Teknik Analiz Raporunu Oku](docs/TECHNICAL_REPORT_TR.md)**
+
+---
+
+## Yapılandırma ve Sorun Giderme
 
 Tüm motor ayarlarının, parametrelerin, paket manipülasyon stratejilerinin ve bağlantı sorunlarını giderme adımlarının detaylı açıklaması için lütfen ilgili rehbere göz atın:
 
